@@ -1,0 +1,139 @@
+% Example "kepler": the problem, the orbits against the exact ellipse, and the
+% convergence and invariant tests. Every number comes from data/
+% (parameters.tex, results.tex, ellipse.dat, orbit_<method>.dat,
+% history_<method>.dat, error_<method>.dat, invariants_<method>.dat), written
+% by examples/kepler/main.f90: run `fpm run --example kepler` from the project
+% root, then build this file in examples/kepler/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\begin{document}
+\section*{Example: the Kepler problem}
+
+\subsection*{1. Problem}
+A body around a fixed mass, in units where $GM = 1$:
+\begin{equation*}
+  \ddot q = -\frac{q}{|q|^3}, \qquad
+  q(0) = (1 - e,\, 0), \qquad
+  \dot q(0) = \Bigl(0,\, \sqrt{\tfrac{1 + e}{1 - e}}\Bigr),
+\end{equation*}
+an ellipse of eccentricity $e$, semi-major axis 1 and period $2\pi$, started at
+the pericentre, where it is fastest. The exact solution follows from Kepler's
+equation for the eccentric anomaly $E(t)$:
+\begin{equation*}
+  E - e \sin E = t, \qquad
+  q = \bigl(\cos E - e,\; \sqrt{1 - e^2}\,\sin E\bigr), \qquad
+  \dot q = \frac{\bigl(-\sin E,\; \sqrt{1 - e^2}\cos E\bigr)}{1 - e\cos E} .
+\end{equation*}
+The energy $H = \tfrac12|\dot q|^2 - 1/|q|$ and the angular momentum
+$L = q_1\dot q_2 - q_2\dot q_1$ are constant. Near the pericentre the force is
+$1/(1 - e)^2 \approx 6$ times stronger than on average, which is what makes an
+eccentric orbit demanding for a fixed step.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.9cm}, % two panels side by side
+      width=6.6cm, height=6.2cm,                           % size of each panel
+      grid=major, grid style={black!12},                   % light grid
+    ]
+    % ---- (a) orbits ----
+    \nextgroupplot[
+      title={(a) 10 orbits, 200 steps per period},         % panel title
+      xlabel={$q_1$}, ylabel={$q_2$},                      % orbital plane
+      axis equal image, xmin=-1.9, xmax=0.7, ymin=-1.1, ymax=1.1, % the ellipse
+      legend to name=keplegend, legend columns=5,          % legend below both panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.3cm}},
+    ]
+    \addplot[blue!80!black, thin] table[x=x, y=y] {data/orbit_rk4.dat};     % RK4: on the ellipse
+    \addlegendentry{\texttt{rk4}}
+    \addplot[black, thick, dashed] table[x=x, y=y] {data/ellipse.dat};      % exact ellipse
+    \addlegendentry{exact}
+    \addplot[only marks, mark=*, mark size=1.5pt] coordinates {(0, 0)};     % the central mass
+    % ---- (b) position error ----
+    \nextgroupplot[
+      title={(b) position error, 200 steps per period},    % panel title
+      xlabel={$t / 2\pi$ (periods)}, ylabel={$|q - q^{\mathrm{exact}}|$}, % error against periods
+      ymode=log, ymin=1e-10, ymax=10, xmin=0, xmax=10,     % from dp54 to order one
+    ]
+    \addplot[green!50!black, dashed]  table[x expr=\thisrow{t}/(2*pi), y=error] {data/history_rk3ws.dat};    % order 2 here
+    \addplot[blue!80!black]           table[x expr=\thisrow{t}/(2*pi), y=error] {data/history_rk4.dat};      % order 4
+    \addplot[red!75!black]            table[x expr=\thisrow{t}/(2*pi), y=error] {data/history_dp54.dat};     % order 5
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under both panels
+    {\pgfplotslegendfromname{keplegend}};
+\end{tikzpicture}
+\end{center}
+(a) At 200 steps per period the ellipse of \texttt{rk3ws} turns (precesses)
+slowly; \texttt{rk4} stays on the exact ellipse at this scale. (b) The error grows mostly in jumps, one at each
+pericentre passage (once per period), where the force changes fastest;
+\texttt{rk3ws} (dashed) is the highest curve, \texttt{dp54} the lowest.
+
+\newpage
+\subsection*{3. Tests: convergence and the invariants $H$, $L$}
+
+\paragraph{Prediction.} (i) The error after a fixed time converges at the
+method's general order as the steps per period double. (ii) Explicit
+Runge--Kutta methods keep neither the energy nor the angular momentum (a
+quadratic invariant: only special implicit methods, such as the Gauss
+methods, keep those), so both drift, by an amount that shrinks at the
+method's order.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.9cm}, % two panels side by side
+      width=6.6cm, height=6.2cm,                           % size of each panel
+      grid=major, grid style={black!12},                   % light grid
+      every axis plot/.append style={thick},               % same weight for all curves
+    ]
+    % ---- (i) convergence ----
+    \nextgroupplot[
+      xmode=log, ymode=log,                                % both axes logarithmic
+      title={(i) error after 3 periods},                   % panel title
+      xlabel={$\Delta t$},                                 % step
+      legend to name=keptestlegend, legend columns=7,      % legend below both panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.2cm}},
+    ]
+    \addplot[green!50!black, dashed, mark=triangle, mark size=1.5pt] table[x=dt, y=error] {data/error_rk3ws.dat}; % order 2 here
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, mark=diamond*, mark size=1.5pt]   table[x=dt, y=error] {data/error_rk4.dat};      % order 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, mark=pentagon*, mark size=1.5pt]   table[x=dt, y=error] {data/error_dp54.dat};     % order 5
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) energy drift ----
+    \nextgroupplot[
+      xmode=log, ymode=log,                                % both axes logarithmic
+      title={(ii) $\max_{s \le t}|H - H_0|$, 400 steps/period}, % panel title: running maximum
+      xlabel={$t / 2\pi$ (periods)}, ymin=1e-10,           % time in periods
+    ]
+    \addplot[green!50!black, dashed]  table[x expr=\thisrow{t}/(2*pi), y=energy] {data/invariants_rk3ws.dat};    % order 2 here
+    \addplot[blue!80!black]           table[x expr=\thisrow{t}/(2*pi), y=energy] {data/invariants_rk4.dat};      % order 4
+    \addplot[red!75!black]            table[x expr=\thisrow{t}/(2*pi), y=energy] {data/invariants_dp54.dat};     % order 5
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under both panels
+    {\pgfplotslegendfromname{keptestlegend}};
+\end{tikzpicture}
+\end{center}
+(i) Every method converges at its general order once the step is small
+enough (\texttt{rk3ws}: 2). The cut-off for the observed order is $10^{-10}$ here:
+over tens of thousands of steps round-off accumulates above $10^{-12}$.
+(ii) The energy drifts in steps, one per pericentre passage, and keeps
+growing: no explicit Runge--Kutta method stays on the orbit.
+\end{document}

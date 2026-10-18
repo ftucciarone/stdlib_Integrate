@@ -1,0 +1,12 @@
+% Written by examples/oscillator/main.f90: do not edit.
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{$E/E_0$ after 100 periods} & \multicolumn{2}{c}{phase error (rad)} & \multicolumn{2}{c}{imaginary-axis limit} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+name & predicted & measured & predicted & measured & from $R$ & measured \\
+\midrule
+\texttt{rk3ws} & $0.949154$ & $0.949154$ & $2.09\times10^{-3}$ & $2.09\times10^{-3}$ & 1.7321 & 1.7321 \\
+\texttt{rk4} & $0.999913$ & $0.999913$ & $-5.22\times10^{-4}$ & $-5.22\times10^{-4}$ & 2.8284 & 2.8284 \\
+\texttt{dp54} & $0.999997$ & $0.999997$ & $2.98\times10^{-7}$ & $2.98\times10^{-7}$ & 0.9972 & 0.9972 \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,12 @@
+% Written by examples/nonlinchem/main.f90: do not edit.
+\begin{tabular}{llccccc}
+\toprule
+method & name & order & linear order & observed & $\max|y_1 + y_2 + y_3 - 1|$ \\
+\midrule
+RK3 of Wicker and Skamarock & \texttt{rk3ws} & 2 & 3 &  1.99 & $4.22\times10^{-15}$ \\
+Classic RK4 & \texttt{rk4} & 4 & 4 &  4.03 & $8.44\times10^{-15}$ \\
+Dormand-Prince 5(4) & \texttt{dp54} & 5 & 5 &  6.50 & $5.77\times10^{-15}$ \\
+\midrule
+\texttt{rk3ws}, pre- and post-processed & & & &  3.00 & $2.44\times10^{-15}$ \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,192 @@
+% Example "vanderpol": the problem, the flow and its limit cycle, the
+% relaxation oscillations for growing mu, and the convergence, period and
+% stiffness tests. Every number comes from data/, written by
+% examples/vanderpol/main.f90: run `fpm run --example vanderpol` from the
+% project root, then build this file with lualatex in examples/vanderpol/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots,colormaps}
+\usetikzlibrary{arrows.meta}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+
+\begin{document}
+\section*{Example: the Van der Pol oscillator}
+
+\subsection*{1. Problem}
+From the SciML problem library (\texttt{prob\_ode\_vanderpol}): an
+oscillator whose damping is negative for small amplitudes and positive for
+large ones, so that every solution but the origin settles on one periodic
+orbit, a limit cycle,
+\begin{equation*}
+  x' = y, \qquad y' = \mu\bigl((1 - x^2)\,y - x\bigr), \qquad (x, y)(0) = (\sqrt 3, 0).
+\end{equation*}
+In the time $\tau = \sqrt\mu\, t$ this is the classic
+$\ddot x - \varepsilon (1 - x^2)\dot x + x = 0$ with $\varepsilon = \sqrt\mu$.
+There is no closed form; the reference is a \texttt{dp54} run at a tiny
+step. For large $\mu$ the oscillation becomes a relaxation oscillation: slow
+drifts along the branches $|x| \in [1, 2]$ and fast jumps between them. On
+the slow branch near $x = \pm 2$ the Jacobian
+$\bigl(\begin{smallmatrix} 0 & 1 \\ -\mu(2xy + 1) & \mu(1 - x^2)\end{smallmatrix}\bigr)$
+has an eigenvalue close to $\mu(1 - x^2) = -3\mu$: the problem becomes stiff.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  % ---- (a) the flow and its limit cycle ----
+  \begin{axis}[
+      name=flow,                                           % anchor for the panels on the right
+      width=8.2cm, height=12.4cm,                          % large phase portrait
+      xmin=-3.2, xmax=3.2, ymin=-3.9, ymax=3.9,            % the window of the direction field
+      xlabel={$x$}, ylabel={$y$},                          % phase plane
+      title={(a) phase plane, $\mu = 1$},                  % panel title
+      colormap/viridis,                                    % perceptually uniform colours
+      colorbar, colorbar style={ylabel={$\ln(|f| + 0.1)$}, width=0.25cm}, % speed scale
+      axis background/.style={fill=black!2},               % very light background
+    ]
+    \addplot[
+        point meta={ln(\thisrow{speed} + 0.1)},            % colour by speed, log scale
+        quiver={u=\thisrow{u}, v=\thisrow{v}, scale arrows=0.24, colored=mapped color},
+        -{Stealth[length=2.2pt]}, line width=0.6pt,        % small arrow heads
+      ] table {data/field.dat};                            % the direction field, unit arrows
+    \foreach \k in {1,...,5} {
+      \addplot[white, line width=1.6pt, forget plot] table[x=x, y=y] {data/start_\k.dat}; % halo
+      \addplot[black!55, line width=0.7pt, forget plot] table[x=x, y=y] {data/start_\k.dat}; % transients
+    }
+    \addplot[only marks, mark=*, mark size=1.6pt, black!55]
+      coordinates {(0.1,0) (3,3) (-3,-2.5) (-0.5,1) (2.6,-3.2)};                          % their starts
+    \addplot[red!80!black, line width=2pt, restrict expr to domain={\thisrow{t}}{12:20}]
+      table[x=x, y=y] {data/reference.dat};                % the limit cycle (reference, t >= 12)
+  \end{axis}
+  % ---- (b) x(t) of the methods ----
+  \begin{axis}[
+      name=series,                                         % anchor for (c)
+      at={($(flow.north east)+(3.3cm,0.2cm)$)}, anchor=north west, % right of (a), past the colour bar
+      width=5.9cm, height=6cm,                             % panel
+      xmin=0, xmax=20, ymin=-3, ymax=3,                    % time window, amplitude
+      ylabel={$x$}, xlabel={$t$},                          % solution against time
+      title={(b) $x(t)$, $\Delta t = 0.25$},               % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.5,-0.32)}, anchor=north, legend columns=4, draw=none}, % below
+    ]
+    \addplot[black!25, line width=3pt] table[x=t, y=x] {data/reference.dat};              % reference, wide
+    \addlegendentry{reference}
+    \addplot[m-rk4, thick, dashed] table[x=t, y=x] {data/solution_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+  \end{axis}
+  % ---- (c) relaxation oscillations for growing mu ----
+  \begin{axis}[
+      at={($(series.south west)+(0,-2.8cm)$)}, anchor=north west, % below (b) and its legend
+      width=5.9cm, height=6cm,                             % panel
+      xmin=12, xmax=20, ymin=-2.6, ymax=3.1,               % after the transients
+      ylabel={$x$}, xlabel={$t$},                          % waveform
+      title={(c) limit cycles, $\mu = 1, 4, 16, 64$},      % panel title
+      axis background/.style={fill=black!2},               % very light background
+      cycle list={[colors of colormap={0,300,600,900} of viridis]}, % four viridis colours
+      legend style={font=\tiny, at={(0.5,-0.32)}, anchor=north, legend columns=4, draw=none}, % below
+    ]
+    \foreach \k/\m in {1/1, 2/4, 3/16, 4/64} {
+      \addplot+[no marks, thick] table[x=t, y=x] {data/cycle_\k.dat};                     % x(t) for this mu
+      \addlegendentryexpanded{$\mu = \m$}
+    }
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+(a) The direction field (arrows of equal length, coloured by the speed
+$|f|$), five trajectories (grey) from inside and outside, and the limit cycle
+(red) they all approach within a few turns. (b) At $\Delta t = 0.25$
+\texttt{rk4} follows the reference at this scale. (c) As $\mu$ grows the cycle becomes a relaxation
+oscillation: slow drifts and fast jumps, with a shorter period in $t$.
+
+\newpage
+\subsection*{3. Tests: convergence, period, stiffness}
+
+\paragraph{Prediction.} (i) The solution converges at each method's general
+order. (ii) So does the period, when each crossing is located to the
+method's accuracy. (iii) On the slow branch near $x = \pm 2$ a step is stable
+while $h\cdot 3\mu \le h^*$, $h^*$ the method's limit on the negative real
+axis (the \texttt{stability} example): the largest stable step should
+approach $h^*/(3\mu)$, so $\mu\,\Delta t_{\max} \to h^*/3$. Freezing the
+Jacobian all along the cycle (``along the cycle''), at the points where the
+flow contracts, gives a second linear estimate.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=3 by 1, horizontal sep=1.4cm}, % three panels
+      width=5.6cm, height=6cm,                             % size of each panel
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+      every axis plot/.append style={thick, mark size=1.2pt}, % same weight for all curves
+    ]
+    % ---- (i) solution error ----
+    \nextgroupplot[
+      xmode=log, ymode=log, title={(i) error at $t = 10$}, xlabel={$\Delta t$},
+      legend to name=vdplegend, legend columns=7,          % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.25cm}},
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, mark=diamond*]            table[x=dt, y=error] {data/error_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, mark=pentagon*]          table[x=dt, y=error] {data/error_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) period error ----
+    \nextgroupplot[xmode=log, ymode=log, title={(ii) period error}, xlabel={$\Delta t$}]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/period_rk3ws.dat};
+    \addplot[m-rk4, mark=diamond*]            table[x=dt, y=error] {data/period_rk4.dat};
+    \addplot[m-dp54, mark=pentagon*]          table[x=dt, y=error] {data/period_dp54.dat};
+    % ---- (iii) stiffness ----
+    \nextgroupplot[
+      xmode=log, title={(iii) $\mu\,\Delta t_{\max}$}, xlabel={$\mu$},
+      ymin=0.3, ymax=1.15, ytick={0.4,0.6,0.8,1.0},       % the scaled stable step
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=mu, y=scaled] {data/stiff_rk3ws.dat};
+    \addplot[m-rk4, mark=diamond*]            table[x=mu, y=scaled] {data/stiff_rk4.dat};
+    \addplot[m-dp54, mark=pentagon*]          table[x=mu, y=scaled] {data/stiff_dp54.dat};
+    \addplot[m-order2, thin, densely dotted, domain=1:1000] {0.66667};   % h*/3, orders 1-2
+    \addplot[m-order3, thin, densely dotted, domain=1:1000] {0.83758};   % h*/3, order 3
+    \addplot[m-rk4, thin, densely dotted, domain=1:1000] {0.92843};      % h*/3, RK4
+    \addplot[m-dp54, thin, densely dotted, domain=1:1000] {1.10219};     % h*/3, DP5(4)
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{vdplegend}};
+\end{tikzpicture}
+\end{center}
+(i, ii) Every method converges at its general order in the solution
+(\texttt{dp54} reaches round-off too early to measure, ---); in the period,
+\texttt{rk3ws} shows order 3 instead of 2: it has effective order 3 (see the
+nonlinear chemistry and Lorenz examples), its second-order error is a
+near-identity change of variables $u \mapsto u + h^2X(u)$, and a change of
+variables does not change the period. The period of the reference agrees to 13 digits with the
+value in the literature, $6.6632868593\dots$ (iii) The scaled stable step
+$\mu\,\Delta t_{\max}$ settles as $\mu$ grows, so the stable step falls like
+$1/\mu$: the problem becomes stiff. Where it settles depends on where the
+run first fails (last column, measured just above the limit). The methods
+that fail on the slow branch (\texttt{rk3ws}) meet $h^*/3$ (dotted lines)
+within $4\,\%$. The others fail
+earlier, during a fast jump, where at $\mu\,\Delta t \approx 0.8$ a single
+step spans most of the jump: a nonlinear failure that linear stability does
+not predict (the estimate along the cycle is too optimistic for \texttt{rk4}
+and \texttt{dp54}).
+\end{document}

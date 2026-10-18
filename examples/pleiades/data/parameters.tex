@@ -1,0 +1,15 @@
+% Written by examples/pleiades/main.f90: do not edit.
+\begin{tabular}{l>{\raggedright\arraybackslash}p{12.4cm}}
+\toprule
+masses & $m_j = j$, $j = 1, \dots, 7$; $G = 1$ \\
+positions & $(3,3), (3,-3), (-1,2), (-3,0), (2,0), (-2,-4), (2,4)$ \\
+velocities & zero except $\dot x_6 = 1.75$, $\dot x_7 = -1.5$, $\dot y_4 = -1.25$, $\dot y_5 = 1$ \\
+interval & $0 \le t \le 3$ \\
+reference & \texttt{dp54}, 1572864 steps; $2.11\times10^{-10}$ from the run with half the steps \\
+convergence & error $\max_i |u_i - u_i^{\mathrm{ref}}|$ at $t = 1$, $3$; 384, 768, \dots, 196608 steps \\
+observed order & two finest levels above $3.00\times10^{-11}$ ($t = 1$), $1.00\times10^{-8}$ ($t = 3$); kept if within 0.3 of the next slope \\
+invariants, history & 3072 steps ($\Delta t = 0.001$); $E_0 = -45.9525$, $L_0 = 109$, $P_0 = (0, 0)$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t}, 28 unknowns \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,12 @@
+% Written by examples/brusselator/main.f90: do not edit.
+\begin{tabular}{lccccc}
+\toprule
+& & & & \multicolumn{2}{c}{stable $\Delta t$ / $h^*\Delta x^2/(4\alpha)$} \\
+\cmidrule(lr){5-6}
+name & $h^*$ & order & observed & $n = 16$ & $n = 512$ \\
+\midrule
+\texttt{rk3ws} & 2.5127 & 2 & 2.00 & 0.9485 & 1.0002 \\
+\texttt{rk4} & 2.7853 & 4 & 4.02 & 0.9446 & 1.0002 \\
+\texttt{dp54} & 3.3066 & 5 & --- & 0.9417 & 1.0001 \\
+\bottomrule
+\end{tabular}

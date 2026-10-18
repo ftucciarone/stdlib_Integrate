@@ -1,0 +1,165 @@
+% Example "robertson": the problem, the concentrations and the fast eigenvalue,
+% and the stability tests of explicit methods on a stiff problem. Every number
+% comes from data/, written by examples/robertson/main.f90: run
+% `fpm run --example robertson` from the project root, then build this file
+% with lualatex in examples/robertson/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+
+\begin{document}
+\section*{Example: Robertson's reaction, a stiff problem}
+
+\subsection*{1. Problem}
+From the SciML problem library (\texttt{prob\_ode\_rober}), Robertson's
+model of three chemical reactions with rates of very different sizes:
+\begin{equation*}
+  y_1' = -0.04\,y_1 + 10^4 y_2 y_3, \qquad
+  y_2' = 0.04\,y_1 - 10^4 y_2 y_3 - 3\cdot10^7 y_2^2, \qquad
+  y_3' = 3\cdot10^7 y_2^2, \qquad y(0) = (1, 0, 0).
+\end{equation*}
+The total $y_1 + y_2 + y_3 = 1$ is conserved. $y_2$ rises within
+$10^{-3}$ time units to a tiny quasi-steady value, after which everything
+changes slowly: $y_1$ falls to half its value only at $t \approx 270$.
+The Jacobian has the eigenvalue $0$ (the conservation) and two others,
+$\lambda = \bigl(T \pm \sqrt{T^2 - 4D}\bigr)/2$ with $T$ its trace and $D$
+the sum of its principal $2\times2$ minors; the fast one, $\lambda_f$, reaches
+$-2.2\times10^3$ within $4\times10^{-3}$ time units and stays between that and
+$-6.8\times10^3$ up to $t = 1000$. An explicit step is
+stable only while $|\lambda_f(t)|\,\Delta t \le h^*$: it must stay below about
+$10^{-3}$ for as long as the integration lasts, although nothing in the
+solution moves on that time scale. That is stiffness.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=1 by 2, vertical sep=1.6cm}, % two panels, one above the other
+      width=14cm, height=7.2cm,                            % wide: time spans nine decades
+      xmode=log, xmin=1e-6, xmax=1000,                     % logarithmic time
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+    ]
+    % ---- (a) concentrations ----
+    \nextgroupplot[
+      title={(a) concentrations, and \texttt{rk4} at three fixed steps}, ymin=0, ymax=1.05,
+      ylabel={concentration}, xticklabels={},              % shares the t axis with (b)
+      legend style={font=\small, at={(0.02,0.5)}, anchor=west, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \addplot[black, very thick] table[x=t, y=y1] {data/reference.dat};                       % y1
+    \addlegendentry{$y_1$}
+    \addplot[black!50, very thick, dashed] table[x=t, y expr=1e4*\thisrow{y2}] {data/reference.dat}; % y2 x 1e4
+    \addlegendentry{$10^4\,y_2$}
+    \addplot[black, very thick, dotted] table[x=t, y=y3] {data/reference.dat};               % y3
+    \addlegendentry{$y_3$}
+    \addplot[red!80!black, thick, mark=*, mark size=1pt] table[x=t, y expr=1e4*\thisrow{y2}] {data/fixed_1.dat}; % rk4, 2e-3
+    \addlegendentry{\texttt{rk4}, $\Delta t = 2\cdot10^{-3}$ ($10^4 y_2$)}
+    \addplot[orange!85!black, thick] table[x=t, y expr=1e4*\thisrow{y2}] {data/fixed_2.dat};  % rk4, 7e-4
+    \addlegendentry{\texttt{rk4}, $\Delta t = 7\cdot10^{-4}$}
+    \addplot[m-rk4, thick] table[x=t, y expr=1e4*\thisrow{y2}] {data/fixed_3.dat};            % rk4, 3e-4
+    \addlegendentry{\texttt{rk4}, $\Delta t = 3\cdot10^{-4}$}
+    % ---- (b) the fast eigenvalue and the thresholds ----
+    \nextgroupplot[
+      title={(b) $|\lambda_f(t)|$ and the limits $h^*/\Delta t$ of the three \texttt{rk4} runs},
+      ymode=log, ymin=1, ymax=2e4, xlabel={$t$}, ylabel={$|\lambda_f|$},
+    ]
+    \addplot[black, very thick] table[x=t, y=lambda] {data/reference.dat};                  % fast eigenvalue
+    \addplot[red!80!black, thick, dashed, domain=1e-6:1000] {2.7853/2e-3};                  % rk4 limit, dt = 2e-3
+    \addplot[orange!85!black, thick, dashed, domain=1e-6:1000] {2.7853/7e-4};               % rk4 limit, dt = 7e-4
+    \addplot[m-rk4, thick, dashed, domain=1e-6:1000] {2.7853/3e-4};                         % rk4 limit, dt = 3e-4
+    \node[font=\scriptsize, text=red!80!black, anchor=south west] at (axis cs:1.5e-6,1392) {$h^*/(2\cdot10^{-3})$};
+    \node[font=\scriptsize, text=orange!85!black, anchor=south west] at (axis cs:1.5e-6,3979) {$h^*/(7\cdot10^{-4})$};
+    \node[font=\scriptsize, text=blue!80!black, anchor=south west] at (axis cs:1.5e-6,9284) {$h^*/(3\cdot10^{-4})$};
+  \end{groupplot}
+\end{tikzpicture}
+\end{center}
+(a) The classic picture on a logarithmic time axis: $y_1$ decays into $y_3$
+through the short-lived intermediate $y_2$ (scaled by $10^4$). \texttt{rk4}
+with $\Delta t = 2\cdot10^{-3}$ fails after seven steps (red, $t = 0.014$); with
+$7\cdot10^{-4}$ it follows the reference until $t \approx 99$ and then fails;
+only with $3\cdot10^{-4}$ does it reach $t \approx 960$. (b) Why: a run is
+stable while the fast eigenvalue (black) stays below its limit $h^*/\Delta t$
+(dashed, $h^* = 2.785$ for \texttt{rk4}). $|\lambda_f|$ jumps to about
+$2190$ within $4\cdot10^{-3}$ time units and then creeps up as $y_3$ grows;
+each run fails shortly after the black curve crosses its line.
+
+\newpage
+\subsection*{3. Tests: where the explicit step fails}
+
+\paragraph{Prediction.} A run with step $\Delta t$ can follow the solution
+only while $|\lambda_f(t)|\,\Delta t \le h^*$. (i) For a given step it fails
+soon after the predicted onset, the first time this is violated. (ii) The
+largest step that reaches a time $T$ is $h^*/\max_{t \le T}|\lambda_f(t)|$.
+(iii) To reach $t = 1000$ an explicit method needs about
+$1000\,\max|\lambda_f|/h^*$ steps, although the solution changes on a time
+scale of tens or hundreds of units.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.8cm}, % two panels
+      width=7.4cm, height=6.8cm,                           % size of each panel
+      xmode=log, ymode=log, grid=major, grid style={black!8}, % log-log
+      axis background/.style={fill=black!2},               % very light background
+    ]
+    % ---- (i) failure time against the step ----
+    \nextgroupplot[
+      title={(i) failure time: measured (marks), onset (lines)}, xlabel={$\Delta t$}, ylabel={$t$},
+      legend to name=roblegend, legend columns=5,          % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.3cm}},
+    ]
+    \addplot[m-rk4, thick] table[x=dt, y=t] {data/onset_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-rk4, only marks, mark=diamond*, mark size=1.9pt, forget plot] table[x=dt, y=t] {data/blowup_rk4.dat};
+    \addplot[m-dp54, thick] table[x=dt, y=t] {data/onset_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    \addplot[m-dp54, only marks, mark=pentagon*, mark size=1.9pt, forget plot] table[x=dt, y=t] {data/blowup_dp54.dat};
+    % ---- (ii) largest step reaching T ----
+    \nextgroupplot[
+      title={(ii) largest $\Delta t$ reaching $T$}, xlabel={$T$}, ylabel={$\Delta t$},
+    ]
+    \addplot[m-rk4, thick] table[x=T, y=predicted] {data/reach_rk4.dat};
+    \addplot[m-rk4, only marks, mark=diamond*, mark size=1.9pt] table[x=T, y=measured] {data/reach_rk4.dat};
+    \addplot[m-dp54, thick] table[x=T, y=predicted] {data/reach_dp54.dat};
+    \addplot[m-dp54, only marks, mark=pentagon*, mark size=1.9pt] table[x=T, y=measured] {data/reach_dp54.dat};
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{roblegend}};
+\end{tikzpicture}
+\end{center}
+(i) Above about $1.7\cdot10^{-3}$ every method fails at its first step;
+below, the measured failures (marks) follow the predicted onset (lines):
+often within a few per cent (\texttt{rk4} at $\Delta t = 5.9\cdot10^{-4}$:
+onset $171.0$, failure $178.8$), later where $|\lambda_f|$ crosses the limit slowly
+and the instability needs time to grow. (ii) The largest step that reaches
+$T$ agrees with $h^*/\max_{t\le T}|\lambda_f|$ within about $1\,\%$ for
+$T = 100$ and $1000$ (table), except \texttt{dp54}, $4$--$7\,\%$ above: its
+$R(-h)$ passes $+1$, not $-1$, at its limit, so an instability grows without
+changing sign and the stiff term $3\cdot10^7y_2^2$ holds $y_2$ at a wrong but
+bounded value; the run is caught only once $y_2$ is off by half. For $T = 1$
+an instability that starts near the end has no time to show, and the
+measured step is a little larger. Reaching $t = 1000$ takes two to three and
+a half million steps, whatever the method; an implicit method follows the slow solution
+with steps of the size of the solution's own time scale.
+\end{document}

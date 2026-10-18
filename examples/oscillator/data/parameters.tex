@@ -1,0 +1,15 @@
+% Written by examples/oscillator/main.f90: do not edit.
+\begin{tabular}{ll}
+\toprule
+frequency & $\omega = 1$ (period $2\pi$) \\
+initial condition & $x(0) = 1$, $v(0) = 0$, $E_0 = 1/2$ \\
+step & $h = \Delta t = 0.1$ \\
+interval & 100 periods, 6283 steps, $t_{\mathrm{end}} = 628.3$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t} \\
+figures & $x(t)$ over the last 3 periods; $(x, v)$ every 4 steps \\
+phase measured & $\operatorname{atan2}(-v, x) - t$, wrapped to $(-\pi, \pi]$ \\
+limit from $R$ & first $y$ with $|R(iy)| > 1$: scan by $10^{-3}$, then 60 bisections \\
+limit measured & largest $h$ with $E_N \le E_0$ after $N = 2000$ steps: 50 bisections on $[0, 6]$ \\
+\bottomrule
+\end{tabular}

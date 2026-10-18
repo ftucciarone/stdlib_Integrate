@@ -1,0 +1,15 @@
+% Written by examples/nonlinchem/main.f90: do not edit.
+\begin{tabular}{ll}
+\toprule
+initial condition & $y(0) = (1, 0, 0)$ \\
+interval & $0 \le t \le 20$ \\
+steps, convergence & $\Delta t = 0.5, 0.25, \dots, 0.5/128$ (8 levels) \\
+error & $\max_i |y_i - y_i^{\mathrm{exact}}|$ at $t = 20$ \\
+observed order & slope of the two finest levels with errors above $10^{-12}$ \\
+invariant & $\max_n |y_1 + y_2 + y_3 - 1|$ over every run of the study \\
+figures & solutions at $\Delta t = 0.5$; error histories at $\Delta t = 0.25$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t} \\
+exact solution & Bessel series (30 terms), within $1.55\times10^{-15}$ (relative) of mpmath at 30 digits \\
+\bottomrule
+\end{tabular}

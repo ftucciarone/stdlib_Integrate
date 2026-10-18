@@ -1,0 +1,173 @@
+% Example "burgers": the problem, the shock and rarefaction in space-time, the
+% overshoots of the methods, and the total-variation test. Every number comes
+% from data/, written by examples/burgers/main.f90: run `fpm run --example
+% burgers` from the project root, then build this file with lualatex in
+% examples/burgers/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots,colormaps,fillbetween}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+% Diverging colour map for u: blue (u = -0.5), white (u = 0.25), red (u = 1).
+\pgfplotsset{colormap={updown}{rgb255(0cm)=(33,102,172) rgb255(1cm)=(146,197,222)
+  rgb255(2cm)=(247,247,247) rgb255(3cm)=(244,165,130) rgb255(4cm)=(178,24,43)}}
+
+\begin{document}
+\section*{Example: Burgers' equation and strong stability}
+
+\subsection*{1. Problem}
+The inviscid Burgers equation, the simplest model of a nonlinear wave that
+steepens into a shock, with a square wave as initial value:
+\begin{equation*}
+  u_t + \bigl(\tfrac12 u^2\bigr)_x = 0, \quad 0 \le x < 1 \text{ periodic}, \qquad
+  u(x, 0) = \begin{cases} 1, & 0.25 < x < 0.6,\\ -0.5, & \text{elsewhere.}\end{cases}
+\end{equation*}
+The jump at $x = 0.6$ is a shock moving at the Rankine--Hugoniot speed
+$\tfrac12(1 - 0.5) = \tfrac14$; the jump at $x = 0.25$ opens into a
+rarefaction fan between the characteristics of speeds $-0.5$ and $1$. Space
+is discretized by a TVD scheme (MUSCL reconstruction, minmod limiter, Rusanov
+flux): with forward Euler it never increases the total variation
+$\mathrm{TV}(u) = \sum_i |u_{i+1} - u_i|$, and so never creates new extrema,
+for CFL $= \max|u|\,\Delta t/\Delta x \le \tfrac12$. The question is which
+Runge--Kutta methods keep that property.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  % ---- (a) space-time ----
+  \begin{axis}[
+      name=spacetime,                                      % anchor for the panels on the right
+      width=8.0cm, height=11cm,                            % tall map
+      view={0}{90}, xmin=0, xmax=1, ymin=0, ymax=0.4,      % seen from above: x across, t up
+      xlabel={$x$}, ylabel={$t$}, ytick={0,0.1,0.2,0.3,0.4}, % space-time
+      title={(a) $u(x, t)$, reference},                    % panel title
+      colormap name=updown, point meta min=-0.5, point meta max=1, % fixed range of u
+      colorbar horizontal, colorbar style={at={(0.5,-0.13)}, anchor=north, xlabel={$u$}, height=0.2cm, width=6cm},
+      enlargelimits=false, axis on top,                    % the map fills the axes
+    ]
+    \addplot3[surf, shader=interp, mesh/ordering=x varies] table[x=x, y=t, z=u] {data/spacetime.dat}; % the solution
+    \addplot[black, thick, dashed, domain=0:0.4] ({0.6 + 0.25*x}, {x});        % shock path x = 0.6 + t/4
+    \addplot[black, thin, dotted, domain=0:0.4] ({0.25 - 0.5*x}, {x});         % fan edge, speed -0.5
+    \addplot[black, thin, dotted, domain=0:0.4] ({0.25 + x}, {x});             % fan edge, speed 1
+    \node[font=\scriptsize, fill=white, fill opacity=0.8, text opacity=1, anchor=south] at (axis cs:0.69,0.30) {shock};
+    \node[font=\scriptsize, fill=white, fill opacity=0.8, text opacity=1, anchor=south] at (axis cs:0.30,0.30) {fan};
+  \end{axis}
+  % ---- (b) final profiles ----
+  \begin{axis}[
+      name=final,                                          % anchor for (c)
+      at={($(spacetime.north east)+(1.5cm,0cm)$)}, anchor=north west, % right of (a)
+      width=6.6cm, height=5.6cm,                           % panel
+      xmin=0, xmax=1, ymin=-0.65, ymax=1.15,               % the profile
+      xlabel={$x$}, ylabel={$u$},                          % solution against space
+      title={(b) $t = 0.4$, CFL $= 0.6$},                  % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.02,0.98)}, anchor=north west, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \addplot[black!25, line width=3pt] table[x=x, y=u] {data/reference.dat};           % reference
+    \addlegendentry{reference}
+    \addplot[m-dp54, thick, dashed] table[x=x, y=u] {data/final_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+  \end{axis}
+  % ---- (c) the first steps, zoomed at the shock ----
+  \begin{axis}[
+      at={($(final.south west)+(0,-1.6cm)$)}, anchor=north west, % below (b)
+      width=6.6cm, height=6cm,                             % panel
+      xmin=0.575, xmax=0.625, ymin=-0.62, ymax=1.1,        % zoom on the jump at x = 0.6
+      xlabel={$x$}, ylabel={$u$},                          % solution against space
+      title={(c) after two steps, CFL $= 0.6$},            % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.98,0.98)}, anchor=north east, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \fill[red!8] (axis cs:0.575,1) rectangle (axis cs:0.625,1.1);                      % above the initial maximum
+    \fill[red!8] (axis cs:0.575,-0.62) rectangle (axis cs:0.625,-0.5);                 % below the initial minimum
+    \addplot[black, thin, densely dotted, domain=0.575:0.625, forget plot] {1};         % initial maximum
+    \addplot[black, thin, densely dotted, domain=0.575:0.625, forget plot] {-0.5};      % initial minimum
+    \addplot[m-dp54, dashed, mark=pentagon, mark size=1.6pt] table[x=x, y=u] {data/early_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+(a) The reference solution: the shock (dashed, the Rankine--Hugoniot path
+$x = 0.6 + t/4$) and the rarefaction fan (between the dotted characteristics
+$x = 0.25 - t/2$ and $x = 0.25 + t$) appear exactly where the theory puts
+them. (b) At $t = 0.4$ the methods agree with the reference at this scale.
+(c) The difference is at the start, while the jump is still sharp: two steps
+in, \texttt{rk3ws} and \texttt{rk4} stay between the initial bounds $-0.5$ and
+$1$, while \texttt{dp54} overshoots to $1.006$ and $-0.506$ (shaded: new
+extrema).
+
+\newpage
+\subsection*{3. Test: total variation and new extrema}
+
+\paragraph{Prediction.} A Runge--Kutta method that is a convex combination of
+forward Euler steps, with SSP coefficient $C$, keeps any property forward
+Euler has for steps up to $C$ times larger (Shu and Osher; Gottlieb, Ketcheson
+and Shu). An SSP method such as SSP-RK3 ($C = 1$), which a program can give
+the library as a tableau, would be guaranteed TVD up to CFL $\tfrac12$ (the
+shaded range). The three methods of the library, \texttt{rk3ws}, \texttt{rk4}
+and \texttt{dp54}, have $C = 0$: no guarantee at any step; they may still be
+TVD in practice. The guarantee is sufficient, not necessary.
+
+\paragraph{Result.}
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.8cm}, % two panels
+      width=7.4cm, height=6.6cm,                           % size of each panel
+      xmin=0, xmax=1.25, ymode=log, ymin=1e-16, ymax=10,   % CFL sweep, log of the increase
+      xlabel={CFL}, grid=major, grid style={black!8},      % shared axes
+      axis background/.style={fill=black!2},               % very light background
+      every axis plot/.append style={thick, mark size=1.3pt}, % same weight for all curves
+    ]
+    % ---- (i) TV increase ----
+    \nextgroupplot[
+      title={(i) largest TV increase per step},            % panel title
+      legend to name=bglegend, legend columns=7,           % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.25cm}},
+    ]
+    \fill[green!8] (axis cs:0,1e-16) rectangle (axis cs:0.5,10);                        % the SSP guarantee
+    \node[font=\scriptsize, text=green!40!black, anchor=north, align=center] at (axis cs:0.25,1) {guaranteed TVD\\for $C = 1$};
+    \addplot[black!50, thin, dashed, forget plot] coordinates {(0,1e-12) (1.25,1e-12)}; % the TVD tolerance
+    \addplot[m-order3, dashed, mark=triangle] table[x=cfl, y=increase] {data/tv_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, dashed, mark=diamond]     table[x=cfl, y=increase] {data/tv_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, dashed, mark=pentagon]   table[x=cfl, y=increase] {data/tv_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) new extrema ----
+    \nextgroupplot[title={(ii) largest new extremum}]
+    \fill[green!8] (axis cs:0,1e-16) rectangle (axis cs:0.5,10);                        % the SSP guarantee
+    \addplot[m-order3, dashed, mark=triangle] table[x=cfl, y=extremum] {data/extrema_rk3ws.dat};
+    \addplot[m-rk4, dashed, mark=diamond]     table[x=cfl, y=extremum] {data/extrema_rk4.dat};
+    \addplot[m-dp54, dashed, mark=pentagon]   table[x=cfl, y=extremum] {data/extrema_dp54.dat};
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{bglegend}};
+\end{tikzpicture}
+\end{center}
+Without the guarantee, the three methods lose the property inside the range
+an SSP method would keep, or at its edge: \texttt{dp54} from CFL $0.30$,
+\texttt{rk4} from $0.45$ (by $4\times10^{-11}$), \texttt{rk3ws} from $0.50$;
+increases at the level of round-off ($\approx 3\times10^{-15}$, below the
+dashed tolerance) are not counted. \texttt{rk4} is not monotone in the CFL:
+TVD again between $0.55$ and $0.70$.
+\end{document}

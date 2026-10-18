@@ -1,0 +1,14 @@
+% Written by examples/lorenz/main.f90: do not edit.
+\begin{tabular}{l>{\raggedright\arraybackslash}p{12.4cm}}
+\toprule
+parameters & $(\sigma, \rho, \beta) = (10, 28, 8/3)$ \\
+initial condition & $(x, y, z) = (1, 0, 0)$ \\
+reference & \texttt{dp54}, $\Delta t = 9.766\times10^{-6}$, $0 \le t \le 40$; trusted to $t = 34.8$ (departs by $10^{-6}$ from the run at twice the step, plus the time to grow to $10^{-2}$) \\
+convergence & error $\max_i|u_i - u_i^{\mathrm{ref}}|$ at $t = 1$, $\Delta t = 0.02, \dots, 0.02/128$; order from the two finest levels above $10^{-11}$, kept if within 0.3 of the next slope \\
+predictability & $T_{\mathrm{div}}$: first $t$ with $|u - u^{\mathrm{ref}}| > 1$; slope: least squares of $T_{\mathrm{div}}$ against $\ln(1/\Delta t)$ over the levels with $1 < T_{\mathrm{div}} < t_{\mathrm{trust}} - 3$ (at least 3) \\
+Lyapunov exponent & Benettin's method: two \texttt{dp54} runs ($\Delta t = 10^{-3}$), separation $10^{-8}$ restored every time unit, mean growth rate over 500 units: $\lambda = 0.901$ \\
+figures & attractor: \texttt{dp54}, $0 \le t \le 60$; solutions at $\Delta t = 0.01$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t} \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,15 @@
+% Written by examples/lotkavolterra/main.f90: do not edit.
+\begin{tabular}{ll}
+\toprule
+parameters & $(a, b, c, d) = (1.5, 1, 3, 1)$ \\
+initial condition & $x(0) = 1$, $y(0) = 1$, $V_0 = 2$ \\
+equilibrium & $(c/d, a/b) = (3, 1.5)$ \\
+solution figure & $\Delta t = 0.1$, $0 \le t \le 20$ \\
+reference curve & \texttt{dp54}, $\Delta t = 10^{-4}$ \\
+convergence & $\max_t |V - V_0|$, $0 \le t \le 10$, $\Delta t = 0.1, \dots, 0.1/128$ \\
+observed order & slope of the two finest levels with errors in $(10^{-12}, 1)$ \\
+long time & $|V - V_0|$ for $0 \le t \le 1000$ at $\Delta t = 0.05$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t} \\
+\bottomrule
+\end{tabular}

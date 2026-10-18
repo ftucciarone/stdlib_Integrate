@@ -1,0 +1,189 @@
+% Example "heat": the problem, the decay of the modes in space-time, the
+% stability limit against the grid, and the time and space errors. Every
+% number comes from data/, written by examples/heat/main.f90: run
+% `fpm run --example heat` from the project root, then build this file with
+% lualatex in examples/heat/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots,colormaps}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+% Five viridis colours, one per time in the profiles.
+\definecolor{vir1}{HTML}{440154}
+\definecolor{vir2}{HTML}{3B528B}
+\definecolor{vir3}{HTML}{21918C}
+\definecolor{vir4}{HTML}{5EC962}
+\definecolor{vir5}{HTML}{C8B100}
+% Diverging colour map for u: blue below zero, white at zero, red above.
+\pgfplotsset{colormap={heat}{rgb255(0cm)=(33,102,172) rgb255(1cm)=(247,247,247)
+  rgb255(3cm)=(244,165,130) rgb255(5.4cm)=(103,0,13)}}
+
+\begin{document}
+\section*{Example: the heat equation, method of lines}
+
+\subsection*{1. Problem}
+\begin{equation*}
+  u_t = u_{xx}, \quad 0 < x < 1, \qquad u(0, t) = u(1, t) = 0, \qquad
+  u(x, 0) = \sin\pi x + \tfrac12\sin 4\pi x + \tfrac14\sin 9\pi x .
+\end{equation*}
+Each sine mode decays on its own: $u = \sum_k a_k e^{-(k\pi)^2 t}\sin k\pi x$.
+Central differences on $n$ interior nodes, $\Delta x = 1/(n + 1)$, turn it
+into $u' = Au$, $A$ the tridiagonal matrix $(1, -2, 1)/\Delta x^2$, whose
+eigenvectors are the same sine modes with eigenvalues
+\begin{equation*}
+  \lambda_k = -\frac{4}{\Delta x^2}\sin^2\frac{k\pi\Delta x}{2},
+  \qquad -\frac{4}{\Delta x^2} < \lambda_n \le \lambda_k \le \lambda_1 \approx -\pi^2 ,
+\end{equation*}
+so the semi-discrete system is solved exactly by the same sum with
+$\lambda_k$ in place of $-(k\pi)^2$. The fastest mode $\lambda_n$ grows like
+$\Delta x^{-2}$: the system becomes stiff as the grid is refined. The example
+uses the model classes: the state holds the boundary nodes too, which the
+model's \texttt{apply\_boundaries} sets to zero before every evaluation.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  % ---- (a) space-time ----
+  \begin{axis}[
+      name=map,                                            % anchor for the panels on the right
+      width=8cm, height=10.6cm,                            % tall map
+      view={0}{90}, xmin=0, xmax=1, ymin=0, ymax=0.01,     % x across, t up: the fast modes fade here
+      xlabel={$x$}, ylabel={$t$}, ytick={0,0.002,...,0.01}, % space-time
+      scaled y ticks=false, yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=3}, % 0.002, not 10^-3
+      title={(a) $u(x, t)$, \texttt{rk4}, $n = 63$},       % panel title
+      colormap name=heat, point meta min=-0.25, point meta max=1.35, % the range of u
+      colorbar horizontal, colorbar style={at={(0.5,-0.13)}, anchor=north, xlabel={$u$}, height=0.2cm, width=6cm},
+      enlargelimits=false, axis on top,                    % the map fills the axes
+    ]
+    \addplot3[surf, shader=interp, mesh/ordering=x varies] table[x=x, y=t, z=u] {data/spacetime.dat};
+  \end{axis}
+  % ---- (b) profiles ----
+  \begin{axis}[
+      name=profiles,                                       % anchor for (c)
+      at={($(map.north east)+(1.5cm,0cm)$)}, anchor=north west, % right of (a)
+      width=6.8cm, height=6.2cm,                           % panel
+      xmin=0, xmax=1, ymin=-0.35, ymax=1.45,               % the profiles
+      xlabel={$x$}, ylabel={$u$},                          % solution against space
+      title={(b) profiles: \texttt{rk4} (dots), exact PDE (lines)}, % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.98,0.98)}, anchor=north east, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \addplot[vir1, thick, no marks] table[x=x, y=e1] {data/profiles.dat};            % exact PDE solution, t = 0
+    \addlegendentry{$t = 0$}
+    \addplot[vir1, only marks, mark=*, mark size=0.9pt, forget plot]
+      table[x=x, y=u1] {data/profiles.dat};                                    % rk4, n = 63, t = 0
+    \addplot[vir2, thick, no marks] table[x=x, y=e2] {data/profiles.dat};            % exact PDE solution, t = 0.002
+    \addlegendentry{$t = 0.002$}
+    \addplot[vir2, only marks, mark=*, mark size=0.9pt, forget plot]
+      table[x=x, y=u2] {data/profiles.dat};                                    % rk4, n = 63, t = 0.002
+    \addplot[vir3, thick, no marks] table[x=x, y=e3] {data/profiles.dat};            % exact PDE solution, t = 0.005
+    \addlegendentry{$t = 0.005$}
+    \addplot[vir3, only marks, mark=*, mark size=0.9pt, forget plot]
+      table[x=x, y=u3] {data/profiles.dat};                                    % rk4, n = 63, t = 0.005
+    \addplot[vir4, thick, no marks] table[x=x, y=e4] {data/profiles.dat};            % exact PDE solution, t = 0.01
+    \addlegendentry{$t = 0.01$}
+    \addplot[vir4, only marks, mark=*, mark size=0.9pt, forget plot]
+      table[x=x, y=u4] {data/profiles.dat};                                    % rk4, n = 63, t = 0.01
+    \addplot[vir5, thick, no marks] table[x=x, y=e5] {data/profiles.dat};            % exact PDE solution, t = 0.03
+    \addlegendentry{$t = 0.03$}
+    \addplot[vir5, only marks, mark=*, mark size=0.9pt, forget plot]
+      table[x=x, y=u5] {data/profiles.dat};                                    % rk4, n = 63, t = 0.03
+  \end{axis}
+  % ---- (c) stability against the grid ----
+  \begin{axis}[
+      at={($(profiles.south west)+(0,-1.6cm)$)}, anchor=north west, % below (b)
+      width=6.8cm, height=6.2cm,                           % panel
+      xmode=log, ymode=log, xlabel={$\Delta x$}, ylabel={largest stable $\Delta t$}, % log-log
+      xtick={0.004,0.01,0.03,0.06}, xticklabels={0.004,0.01,0.03,0.06},             % plain grid spacings
+      title={(c) stability limit, measured and predicted}, % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.02,0.98)}, anchor=north west, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \addplot[m-rk4, thin, forget plot] table[x=dx, y=predicted] {data/stable_rk4.dat};                  % h* = 2.79
+    \addplot[m-rk4, only marks, mark=diamond*, mark size=1.8pt] table[x=dx, y=measured] {data/stable_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, thin, forget plot] table[x=dx, y=predicted] {data/stable_dp54.dat};                % h* = 3.31
+    \addplot[m-dp54, only marks, mark=pentagon*, mark size=1.8pt] table[x=dx, y=measured] {data/stable_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+(a) The first hundredth of a time unit: the nine bumps of $\sin 9\pi x$ fade
+first (decay rate $81\pi^2$, gone by $t \approx 0.004$), then the four of
+$\sin 4\pi x$ ($16\pi^2$), leaving the slow $\sin\pi x$. (b) Profiles at five times: \texttt{rk4} on 63 nodes (dots) on the
+exact PDE solution (lines). (c) The largest stable step on five grids
+(markers) against the prediction $h^*/|\lambda_n| \approx h^*\Delta x^2/4$
+(lines, slope 2): every method follows it within $0.25\,\%$; methods with
+the same real-axis limit share a line.
+
+\newpage
+\subsection*{3. Tests: time error, stability, space error}
+
+\paragraph{Prediction.} (i) Against the exact semi-discrete solution only the
+time error remains: each method converges at its order on this linear
+problem (\texttt{rk3ws}: 3). (ii) A step is stable while $h|\lambda_n| \le
+h^*$, so $\Delta t_{\max} = h^*/|\lambda_n| \approx h^*\Delta x^2/4$.
+(iii) Against the PDE, with $\Delta t$ near that limit, the time error is of
+order $\Delta t^p \sim \Delta x^{2p}$, far below the space error
+$O(\Delta x^2)$: every method should give the same second-order error in
+$\Delta x$.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.8cm}, % two panels
+      width=7.4cm, height=6.6cm,                           % size of each panel
+      xmode=log, ymode=log, grid=major, grid style={black!8}, % log-log
+      axis background/.style={fill=black!2},               % very light background
+      every axis plot/.append style={thick, mark size=1.3pt}, % same weight for all curves
+    ]
+    % ---- (i) time convergence ----
+    \nextgroupplot[
+      title={(i) time error, $n = 63$, $t = 0.02$}, xlabel={$\Delta t$}, % against the semi-discrete solution
+      legend to name=htlegend, legend columns=7,           % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.25cm}},
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, mark=diamond*]            table[x=dt, y=error] {data/error_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, mark=pentagon*]          table[x=dt, y=error] {data/error_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) PDE error ----
+    \nextgroupplot[title={(ii) error against the PDE, $t = 0.02$}, xlabel={$\Delta x$}]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dx, y=error] {data/pde_rk3ws.dat};
+    \addplot[m-rk4, mark=diamond*]            table[x=dx, y=error] {data/pde_rk4.dat};
+    \addplot[m-dp54, mark=pentagon*]          table[x=dx, y=error] {data/pde_dp54.dat};
+    \addplot[black, thin, densely dotted, domain=0.0035:0.07] {1.0*x^2};          % slope 2 guide
+    \node[font=\scriptsize, anchor=north west] at (axis cs:0.012,1.4e-4) {$\Delta x^2$};
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{htlegend}};
+\end{tikzpicture}
+\end{center}
+(i) Every method converges at its order (\texttt{rk3ws}: 3 on this linear
+problem). \texttt{dp54} is at round-off already at the largest step tested,
+$10^{-4}$. (ii) Against the PDE the three methods give the same error, of
+order $\Delta x^2$ ($1.5\times10^{-5}$ on the finest grid for all three): at
+the steps stability allows, the time error is negligible. For a stiff, diffusive problem the explicit step is set
+by stability, not by accuracy, and a higher order buys almost nothing.
+\end{document}

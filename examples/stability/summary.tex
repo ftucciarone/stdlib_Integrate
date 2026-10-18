@@ -1,0 +1,124 @@
+% Example "stability": the problem, the solutions against the exact one, and
+% the stability-limit test. Every number comes from data/ (parameters.tex,
+% results.tex, exact.dat, solution_<method>.dat, edge_*.dat,
+% theory_<method>.dat, measured_<method>.dat), written by
+% examples/stability/main.f90: run `fpm run --example stability` from the
+% project root, then build this file in examples/stability/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\begin{document}
+\section*{Example: stability limit on the real axis}
+
+\subsection*{1. Problem}
+\begin{equation*}
+  \frac{dy}{dt} = -y, \qquad y(0) = 1,
+  \qquad\text{exact solution}\qquad y(t) = e^{-t} \to 0 .
+\end{equation*}
+The exact solution decays for every $t$; the question is how large the step
+$h = \Delta t$ can be before the numerical solution stops decaying. One step
+multiplies $y$ by the stability polynomial of the method,
+\begin{equation*}
+  y_{n+1} = R(-h)\, y_n, \qquad
+  R(z) = 1 + z\, b^{\mathsf T} (I - zA)^{-1} \mathbf{1},
+\end{equation*}
+computed here from the Butcher tableau alone, independently of the step
+routines.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.8cm}, % two panels side by side
+      width=7.6cm, height=6cm,                             % size of each panel
+      grid=major, grid style={black!12},                   % light grid
+      xlabel={$t$},                                        % both panels against time
+    ]
+    % ---- (a) every method at h = 1.5 ----
+    \nextgroupplot[
+      title={(a) every method, $h = 1.5$},                 % panel title
+      ylabel={$y$}, ymin=-0.6, ymax=1.05, xmin=0, xmax=15, % signed solution
+      legend to name=stablegend, legend columns=6,         % legend below both panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.3cm}},
+    ]
+    \addplot[black, thick] table[x=t, y=y] {data/exact.dat};                                      % exact
+    \addlegendentry{exact}
+    \addplot[green!50!black, mark=triangle*, mark size=1.6pt] table[x=t, y=y] {data/solution_rk3ws.dat}; % order 3
+    \addlegendentry{order 3}
+    \addplot[blue!80!black, mark=diamond*, mark size=1.6pt] table[x=t, y=y] {data/solution_rk4.dat};  % order 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, mark=pentagon*, mark size=1.6pt] table[x=t, y=y] {data/solution_dp54.dat}; % order 5
+    \addlegendentry{\texttt{dp54}}
+    % ---- (b) rk4 on both sides of its limit ----
+    \nextgroupplot[
+      title={(b) \texttt{rk4} at $(1 \mp 0.02)\,h^*$},     % panel title
+      ymode=log, ylabel={$|y|$},                           % growth or decay, log scale
+    ]
+    \addplot[blue!80!black, thick] table[x=t, y=y] {data/edge_below.dat}; % 0.98 h*: decays
+    \addplot[blue!80!black, thick, dashed] table[x=t, y=y] {data/edge_above.dat}; % 1.02 h*: grows
+    \node[blue!80!black, anchor=west, font=\small] at (axis description cs:0.05,0.18) {$0.98\,h^*$}; % label, inside
+    \node[blue!80!black, anchor=west, font=\small] at (axis description cs:0.05,0.85) {$1.02\,h^*$}; % label, outside
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under both panels
+    {\pgfplotslegendfromname{stablegend}};
+\end{tikzpicture}
+\end{center}
+(a) At $h = 1.5$ every method is stable, but only in the sense that $|y|$
+decays, at a rate set by $R(-1.5)$, against $e^{-1.5} \approx 0.22$ for the
+exact solution. (b) Two percent on either side of its limit,
+\texttt{rk4}'s solution decays or grows exponentially, alternating in sign
+($R(-h^*) = -1$, $|y|$ drawn): the limit is sharp.
+
+\newpage
+\subsection*{3. Test: the stability limit $h^*$}
+
+\paragraph{Prediction.} The run stays bounded exactly while
+$|R(-h)| \le 1$. The limit $h^*$ is the first $h$ where $|R(-h)|$ exceeds 1:
+2 for every first- and second-order method, $\approx 2.51$ for third order,
+$\approx 2.79$ for RK4.
+
+\paragraph{Result.}
+\begin{center}
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{axis}[
+      width=10.5cm, height=7cm,                          % figure size
+      xmin=0, xmax=4, ymin=0, ymax=2,                     % zoom on the region around |R| = 1
+      xlabel={step $h = \Delta t$},                       % x: step on y' = -y
+      ylabel={growth per step},                           % y: |R(-h)|, or measured |y_N/y_0|^{1/N}
+      grid=major, grid style={black!12},                  % light grid
+      legend pos=outer north east, legend cell align=left,% legend right of the axes
+      legend style={font=\small},                         % compact legend
+    ]
+    \fill[black!6] (axis cs:0,0) rectangle (axis cs:4,1); % below 1: bounded runs
+    \addplot[green!50!black, thick] table[x=h, y=absR] {data/theory_rk3ws.dat};    % order-3 polynomial
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, thick] table[x=h, y=absR] {data/theory_rk4.dat};        % order-4 polynomial
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, thick] table[x=h, y=absR] {data/theory_dp54.dat};        % DP5(4), degree 6
+    \addlegendentry{\texttt{dp54}}
+    \addplot[only marks, mark=*, mark size=1.2pt, green!50!black]  table[x=h, y=growth] {data/measured_rk3ws.dat};    % runs: rk3ws
+    \addplot[only marks, mark=*, mark size=1.2pt, blue!80!black]   table[x=h, y=growth] {data/measured_rk4.dat};      % runs: RK4
+    \addplot[only marks, mark=*, mark size=1.2pt, red!75!black]    table[x=h, y=growth] {data/measured_dp54.dat};     % runs: DP5(4)
+    \addplot[black, dashed, domain=0:4] {1};               % the threshold |R| = 1
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+Lines: $|R(-h)|$ from the tableau. Dots: growth per step measured from the
+runs. Theory and runs agree to the digits shown. A larger $h^*$ does not by
+itself mean a cheaper method: per evaluation of $f$, RK4 allows
+$2.79/4 \approx 0.70$, \texttt{rk3ws} $2.51/3 \approx 0.84$, \texttt{dp54}
+$3.31/6 \approx 0.55$.
+\end{document}

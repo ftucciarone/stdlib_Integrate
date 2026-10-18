@@ -1,0 +1,20 @@
+# Copyrighted material: never in git
+biblio/
+test/NIHM/
+docs/references/
+
+# Build output
+build/
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Documents built from their .tex (the figures in docs/tikz/ are kept: the documents include them)
+docs/usage.pdf
+examples/*/summary.pdf
+
+# Local files
+.DS_Store
+.claude/settings.local.json

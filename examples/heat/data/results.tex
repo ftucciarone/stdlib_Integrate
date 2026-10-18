@@ -1,0 +1,12 @@
+% Written by examples/heat/main.f90: do not edit.
+\begin{tabular}{lccccc}
+\toprule
+& & \multicolumn{2}{c}{time convergence, $n = 63$} & stability & PDE \\
+\cmidrule(lr){3-4}
+name & $h^*$ & order & observed & measured / predicted & order in $\Delta x$ \\
+\midrule
+\texttt{rk3ws} & 2.5127 & 2 & 2.99 & 1.0011 &  2.00 \\
+\texttt{rk4} & 2.7853 & 4 & 4.01 & 1.0011 &  2.00 \\
+\texttt{dp54} & 3.3066 & 5 & --- & 1.0008 &  2.00 \\
+\bottomrule
+\end{tabular}

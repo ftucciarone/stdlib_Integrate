@@ -1,0 +1,221 @@
+% Example "pleiades": the problem, the seven orbits with their close
+% encounters, and the convergence and invariant tests. Every number comes from
+% data/ (parameters.tex, results.tex, orbits.dat, encounter.dat,
+% encounters.dat, history_<method>.dat, energy_<method>.dat,
+% error1_<method>.dat, error_<method>.dat), written by
+% examples/pleiades/main.f90: run `fpm run --example pleiades` from the project
+% root, then build this file with lualatex in examples/pleiades/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots,fillbetween}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+% Okabe-Ito colour-blind-safe palette, one colour per body.
+\definecolor{b1}{HTML}{E69F00}  % orange
+\definecolor{b2}{HTML}{56B4E9}  % sky blue
+\definecolor{b3}{HTML}{009E73}  % bluish green
+\definecolor{b4}{HTML}{0072B2}  % blue
+\definecolor{b5}{HTML}{D55E00}  % vermilion
+\definecolor{b6}{HTML}{CC79A7}  % reddish purple
+\definecolor{b7}{HTML}{444444}  % dark grey
+% Method colours, the same in every example.
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+
+\begin{document}
+\section*{Example: Pleiades, seven bodies}
+
+\subsection*{1. Problem}
+From the SciML problem library (\texttt{prob\_ode\_pleiades}), after Hairer,
+N{\o}rsett and Wanner (\emph{Solving ODEs I}, section II.10): seven stars in
+a plane, star $j$ of mass $m_j = j$, attracting each other by gravity
+($G = 1$),
+\begin{equation*}
+  \ddot x_i = \sum_{j \ne i} m_j\,\frac{x_j - x_i}{r_{ij}^3}, \qquad
+  \ddot y_i = \sum_{j \ne i} m_j\,\frac{y_j - y_i}{r_{ij}^3}, \qquad
+  r_{ij} = \sqrt{(x_i - x_j)^2 + (y_i - y_j)^2},
+\end{equation*}
+a system of 28 first-order equations for $0 \le t \le 3$. There is no closed
+form; the stars pass close to each other several times, where the forces
+become large and change fast. The reference is a \texttt{dp54} run with
+over a million steps. Three quantities are conserved: the total momentum
+$P = \sum m_i \dot q_i$, the angular momentum
+$L = \sum m_i (x_i\dot y_i - y_i\dot x_i)$ and the energy
+$E = \tfrac12\sum m_i|\dot q_i|^2 - \sum_{i<j} m_i m_j / r_{ij}$.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  % ---- (a) the seven orbits ----
+  \begin{axis}[
+      name=orbits,                                         % anchor for the panels on the right
+      width=9.4cm, height=13.4cm,                          % tall: the orbits span y = -4 ... 5.2
+      axis equal image,                                    % true shapes
+      xmin=-3.9, xmax=3.9, ymin=-4.6, ymax=5.8,            % all orbits, with margins
+      xlabel={$x$}, ylabel={$y$},                          % the plane of motion
+      title={(a) reference orbits, $0 \le t \le 3$},       % panel title
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+    ]
+    \foreach \k/\w in {1/0.6, 2/0.75, 3/0.9, 4/1.05, 5/1.2, 6/1.35, 7/1.5} {
+      \edef\temp{\noexpand\addplot[color=b\k, line width=\w pt, line join=round]
+        table[x=x\k, y=y\k] {data/orbits.dat};}          % orbit of body k, width grows with its mass
+      \temp
+      \edef\temp{\noexpand\addplot[only marks, mark=*, mark size=2.2pt, color=b\k]
+        table[x=x\k, y=y\k, restrict expr to domain={\noexpand\thisrow{t}}{2.999:3.001}] {data/orbits.dat};}
+      \temp                                                % filled dot: position at t = 3
+    }
+    % starting positions, hollow, numbered by body (mass)
+    \foreach \k/\x/\y/\pos in {1/3/3/east, 2/3/-3/east, 3/-1/2/north east, 4/-3/0/west,
+                               5/2/0/south east, 6/-2/-4/south, 7/2/4/north} {
+      \edef\temp{\noexpand\node[circle, draw=b\k, fill=white, line width=0.9pt, inner sep=1.6pt]
+        at (axis cs:\x,\y) {};}                            % hollow circle: position at t = 0
+      \temp
+      \edef\temp{\noexpand\node[font=\noexpand\scriptsize\noexpand\bfseries, text=b\k, anchor=\pos, inner sep=3pt]
+        at (axis cs:\x,\y) {\k};}                          % body number = mass
+      \temp
+    }
+  \end{axis}
+  % ---- (b) closest distance in time ----
+  \begin{axis}[
+      name=distance,                                       % anchor for panel (c)
+      at={($(orbits.north east)+(1.6cm,-0.55cm)$)}, anchor=north west, % to the right of (a)
+      width=7.2cm, height=5.6cm,                           % short panel
+      xmin=0, xmax=3, ymode=log, ymin=0.02, ymax=6,        % distances from 0.03 to 5
+      ylabel={$\min_{i<j} r_{ij}$},                        % smallest distance between two bodies
+      xticklabels={},                                      % shares the t axis with (c)
+      title={(b) closest pair},                            % panel title
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+    ]
+    \addplot[name path=d, black, thick] table[x=t, y=distance] {data/encounter.dat};   % smallest distance
+    \path[name path=floor] (axis cs:0,0.02) -- (axis cs:3,0.02);                      % bottom of the axis
+    \addplot[black!12] fill between[of=d and floor];                                  % shade under the curve
+    \addplot[only marks, mark=*, mark size=1.8pt, red!75!black,
+             nodes near coords, point meta=explicit symbolic,                          % label each encounter
+             every node near coord/.style={font=\tiny, rotate=90, anchor=west, xshift=2pt, text=red!60!black, fill=white, fill opacity=0.8, text opacity=1, inner sep=1pt}]
+      table[x=t, y=distance, meta=pair] {data/encounters.dat};                         % close encounters, by pair
+  \end{axis}
+  % ---- (c) position error of the methods ----
+  \begin{axis}[
+      at={($(distance.south west)+(0,-1.1cm)$)}, anchor=north west, % below (b), room for its title
+      width=7.2cm, height=7.4cm,                           % taller panel
+      xmin=0, xmax=3, ymode=log, ymin=1e-12, ymax=10,      % errors from dp54 to order one
+      xlabel={$t$}, ylabel={position error},               % error against the reference
+      title={(c) error, 3072 steps},                       % panel title
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.98,0.03)}, anchor=south east, fill=white, fill opacity=0.85,
+                    text opacity=1, draw=black!30},        % compact legend, in the empty bottom-right corner
+      legend cell align=left,
+    ]
+    \addplot[ycomb, red!25, thin, forget plot]
+      table[x=t, y expr=1e3] {data/encounters.dat};       % vertical lines at the encounters
+    \addplot[m-order3, thick, dashed] table[x=t, y=error] {data/history_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, thick]    table[x=t, y=error] {data/history_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, thick]   table[x=t, y=error] {data/history_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+(a) The seven orbits of the reference: hollow circles are the starting
+positions, numbered by body (the number is also the mass, and the line
+width grows with it), filled dots the positions at $t = 3$. (b) The distance
+between the closest two stars: seven close encounters (red, labelled by the
+pair), the closest between stars 1 and 7 at $t \approx 1.68$, at a distance
+of $0.034$. (c) The error of each method at 3072 steps against the
+reference: it jumps at every encounter (light red lines), by orders of
+magnitude for the low-order methods; before the first encounter
+($t \approx 1.23$) the errors are small and grow smoothly.
+
+\newpage
+\subsection*{3. Tests: convergence and the invariants}
+
+\paragraph{Prediction.} (i) Each method converges at its general order;
+close encounters add large higher-order terms, so the asymptotic range
+starts at smaller steps after them. \texttt{rk3ws} is a special case: its
+only third-order defect is the local error $-\tfrac{h^3}{24}f''(f,f)$ (here
+the velocity error $-\tfrac{h^3}{24}g''(q)[\dot q, \dot q]$), which equals
+$h^3\bigl(\tfrac{d}{dt}X - f'X\bigr)$ for $X = -\tfrac1{24}\ddot u$ on any
+autonomous problem; its second-order global error,
+$h^2\bigl(X(u(t)) - \Phi(t,0)X(u_0)\bigr)$, therefore does not accumulate
+like the third-order one (effective order 3; the nonlinear chemistry example
+removes it by pre- and post-processing). (ii) The total momentum $P$ is a linear
+invariant: every Runge--Kutta method keeps it to round-off. $L$ (quadratic)
+and $E$ are kept by none of these methods.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=3 by 1, horizontal sep=1.3cm, y descriptions at=edge left}, % three panels
+      width=5.6cm, height=6cm,                             % size of each panel
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+      every axis plot/.append style={thick, mark size=1.2pt}, % same weight for all curves
+    ]
+    % ---- (i) error at t = 1 ----
+    \nextgroupplot[
+      xmode=log, ymode=log, ymin=1e-13, ymax=1e3,          % shared error range
+      title={(i) error at $t = 1$}, xlabel={$\Delta t$}, ylabel={error},
+      legend to name=pltestlegend, legend columns=7,       % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.25cm}},
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/error1_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, mark=diamond*]           table[x=dt, y=error] {data/error1_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, mark=pentagon*]         table[x=dt, y=error] {data/error1_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) error at t = 3 ----
+    \nextgroupplot[
+      xmode=log, ymode=log, ymin=1e-13, ymax=1e3,          % shared error range
+      title={(ii) error at $t = 3$}, xlabel={$\Delta t$},
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat};
+    \addplot[m-rk4, mark=diamond*]           table[x=dt, y=error] {data/error_rk4.dat};
+    \addplot[m-dp54, mark=pentagon*]         table[x=dt, y=error] {data/error_dp54.dat};
+    % ---- (iii) energy drift in time ----
+    \nextgroupplot[
+      ymode=log, ymin=1e-13, ymax=1e3,                     % shared range
+      title={(iii) $|E - E_0|$, 3072 steps}, xlabel={$t$}, xmin=0, xmax=3,
+    ]
+    \addplot[ycomb, red!25, thin] table[x=t, y expr=1e3] {data/encounters.dat};  % encounters
+    \addplot[m-order3, dashed, no marks] table[x=t, y=drift] {data/energy_rk3ws.dat};
+    \addplot[m-rk4, no marks]      table[x=t, y=drift] {data/energy_rk4.dat};
+    \addplot[m-dp54, no marks]     table[x=t, y=drift] {data/energy_dp54.dat};
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{pltestlegend}};
+\end{tikzpicture}
+\end{center}
+(i) Before the first encounter ($t = 1$) every method shows its general
+order, \texttt{rk3ws} 2; \texttt{dp54} is at round-off
+already at the largest step (---). (ii) After the encounters ($t = 3$) the
+errors are far larger (at $\Delta t \approx 10^{-3}$, up to
+$6 \times 10^{10}$ times for \texttt{rk4}) and the asymptotic range starts at
+much smaller steps: \texttt{dp54} never settles in this range
+(---); \texttt{rk3ws} now shows order 3 over five levels, because its
+third-order error, amplified at each encounter, outweighs its small
+second-order term at every step tested. (iii) The energy error jumps at the
+encounters and stays; the total momentum, a linear invariant, is kept to
+$10^{-13}$ by every method (table).
+\end{document}

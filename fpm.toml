@@ -1,0 +1,82 @@
+name = "stdlib_Integrate"
+version = "0.1.0"
+license = "MIT"
+author = "Francesco Tucciarone"
+maintainer = "43784914+ftucciarone@users.noreply.github.com"
+copyright = "Copyright 2026, Francesco Tucciarone"
+
+[library]
+source-dir = "src"
+
+[dependencies]
+stdlib = "*"
+
+[[example]]
+name = "decay"
+source-dir = "examples/decay"
+main = "main.f90"
+
+[[example]]
+name = "stability"
+source-dir = "examples/stability"
+main = "main.f90"
+
+[[example]]
+name = "oscillator"
+source-dir = "examples/oscillator"
+main = "main.f90"
+
+[[example]]
+name = "nonlinchem"
+source-dir = "examples/nonlinchem"
+main = "main.f90"
+
+[[example]]
+name = "lotkavolterra"
+source-dir = "examples/lotkavolterra"
+main = "main.f90"
+
+[[example]]
+name = "kepler"
+source-dir = "examples/kepler"
+main = "main.f90"
+
+[[example]]
+name = "arenstorf"
+source-dir = "examples/arenstorf"
+main = "main.f90"
+
+[[example]]
+name = "pleiades"
+source-dir = "examples/pleiades"
+main = "main.f90"
+
+[[example]]
+name = "vanderpol"
+source-dir = "examples/vanderpol"
+main = "main.f90"
+
+[[example]]
+name = "lorenz"
+source-dir = "examples/lorenz"
+main = "main.f90"
+
+[[example]]
+name = "burgers"
+source-dir = "examples/burgers"
+main = "main.f90"
+
+[[example]]
+name = "heat"
+source-dir = "examples/heat"
+main = "main.f90"
+
+[[example]]
+name = "brusselator"
+source-dir = "examples/brusselator"
+main = "main.f90"
+
+[[example]]
+name = "robertson"
+source-dir = "examples/robertson"
+main = "main.f90"

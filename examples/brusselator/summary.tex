@@ -1,0 +1,164 @@
+% Example "brusselator": the problem, the two species in space-time and the
+% oscillation at one point, and the convergence and stability tests. Every
+% number comes from data/, written by examples/brusselator/main.f90: run
+% `fpm run --example brusselator` from the project root, then build this file
+% with lualatex in examples/brusselator/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots,colormaps}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+
+\begin{document}
+\section*{Example: the Brusselator, reaction and diffusion}
+
+\subsection*{1. Problem}
+From the SciML problem library (\texttt{prob\_ode\_brusselator\_1d}), with the
+parameters of Hairer and Wanner (\emph{Solving ODEs II}, section IV.1): two
+chemical species react and diffuse on a periodic interval,
+\begin{equation*}
+  u_t = A - (B + 1)\,u + u^2 v + \alpha u_{xx}, \qquad
+  v_t = B u - u^2 v + \alpha v_{xx},
+\end{equation*}
+\begin{equation*}
+  A = 1,\; B = 3,\; \alpha = \tfrac1{50}, \qquad u(x, 0) = 1 + \sin 2\pi x,
+  \quad v(x, 0) = 3, \qquad 0 \le x < 1 \text{ periodic}.
+\end{equation*}
+Without diffusion the reaction has the fixed point $(A, B/A) = (1, 3)$,
+unstable since $B > 1 + A^2$: the concentrations oscillate on a limit cycle.
+Central differences on $n$ points ($\Delta x = 1/n$) turn diffusion into
+eigenvalues $-\tfrac{4\alpha}{\Delta x^2}\sin^2(k\pi\Delta x)$, the largest
+in size $4\alpha/\Delta x^2$: refining the grid makes the system stiff, while
+the reaction stays mild. No closed form; the reference is \texttt{dp54} at a
+tiny step.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=0.6cm, y descriptions at=edge left}, % two maps
+      width=6.2cm, height=11.2cm,                          % tall maps
+      view={0}{90}, xmin=0, xmax=1, ymin=0, ymax=20,       % x across, t up
+      xlabel={$x$}, ylabel={$t$},                          % space-time
+      colormap/viridis, enlargelimits=false, axis on top,  % the maps fill the axes
+      colorbar horizontal,                                 % one colour bar under each map
+    ]
+    \nextgroupplot[title={(a) $u(x, t)$},
+      colorbar style={at={(0.5,-0.1)}, anchor=north, xlabel={$u$}, height=0.2cm}]
+    \addplot3[surf, shader=interp, mesh/ordering=x varies] table[x=x, y=t, z=u] {data/spacetime.dat}; % species u
+    \addplot[white, thin, densely dashed, domain=0:20] ({0.5}, {x});                       % where (c) looks
+    \nextgroupplot[title={(b) $v(x, t)$},
+      colorbar style={at={(0.5,-0.1)}, anchor=north, xlabel={$v$}, height=0.2cm}]
+    \addplot3[surf, shader=interp, mesh/ordering=x varies] table[x=x, y=t, z=v] {data/spacetime.dat}; % species v
+    \addplot[white, thin, densely dashed, domain=0:20] ({0.5}, {x});                       % where (c) looks
+  \end{groupplot}
+  % ---- (c) the oscillation at x = 1/2 ----
+  \begin{axis}[
+      at={($(group c2r1.north east)+(1.4cm,0cm)$)}, anchor=north west, % right of the maps
+      width=5.2cm, height=5.4cm,                           % panel
+      xmin=0, xmax=20, ymin=0, ymax=5,                     % concentrations in time
+      xlabel={$t$}, title={(c) at $x = \tfrac12$},          % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.02,0.98)}, anchor=north west, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \addplot[blue!70!black, thick] table[x=t, y=u] {data/probe.dat};                 % u(1/2, t)
+    \addlegendentry{$u$}
+    \addplot[orange!85!black, thick] table[x=t, y=v] {data/probe.dat};               % v(1/2, t)
+    \addlegendentry{$v$}
+  \end{axis}
+  % ---- (d) the same in the (u, v) plane ----
+  \begin{axis}[
+      at={($(group c2r1.north east)+(1.4cm,-7.0cm)$)}, anchor=north west, % below (c)
+      width=5.2cm, height=5.4cm,                           % panel
+      xlabel={$u$}, ylabel={$v$}, title={(d) $(u, v)$ at $x = \tfrac12$},
+      axis background/.style={fill=black!2},               % very light background
+      colormap/viridis, point meta min=0, point meta max=20, % colour = time
+    ]
+    \addplot[mesh, thick, point meta=\thisrow{t}] table[x=u, y=v] {data/probe.dat};   % the orbit, coloured by time
+    \addplot[only marks, mark=+, mark size=4pt, very thick, black] coordinates {(1,3)}; % fixed point (A, B/A)
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+(a, b) The two species in space and time, \texttt{rk4} on 64 points. The
+initial bump in $u$ is smoothed out by diffusion within the first time unit;
+then the whole interval oscillates almost in unison, with a period of about
+$7.1$: $u$ stays low while $v$ builds up, until $u$ spikes in a short burst
+that uses up $v$.
+(c) The oscillation at $x = \tfrac12$ (white dashed line in the maps). (d) The
+same in the $(u, v)$ plane, coloured by time: the solution spirals away from
+the unstable fixed point $(1, 3)$ (cross) onto the limit cycle of the
+reaction.
+
+\newpage
+\subsection*{3. Tests: convergence and the stability limit}
+
+\paragraph{Prediction.} (i) The problem is nonlinear: each method converges
+at its general order (\texttt{rk3ws}: 2). (ii) On fine grids the fastest
+eigenvalue is the diffusive one, $\approx -4\alpha/\Delta x^2$, so the stable
+step should approach $h^*\Delta x^2/(4\alpha)$; on coarse grids the reaction,
+whose Jacobian adds eigenvalues of order one, shifts it.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.8cm}, % two panels
+      width=7.4cm, height=6.6cm,                           % size of each panel
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+      every axis plot/.append style={thick, mark size=1.3pt}, % same weight for all curves
+    ]
+    % ---- (i) convergence ----
+    \nextgroupplot[
+      xmode=log, ymode=log, title={(i) error at $t = 10$, $n = 64$}, xlabel={$\Delta t$},
+      legend to name=brlegend, legend columns=7,           % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.25cm}},
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, mark=diamond*]            table[x=dt, y=error] {data/error_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, mark=pentagon*]          table[x=dt, y=error] {data/error_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) stable step relative to the diffusion prediction ----
+    \nextgroupplot[
+      xmode=log, title={(ii) stable $\Delta t$ / $h^*\Delta x^2/(4\alpha)$}, xlabel={$\Delta x$},
+      ymin=0.9, ymax=1.03, xtick={0.002,0.004,0.008,0.016,0.031,0.0625},
+      xticklabels={$\frac1{512}$,$\frac1{256}$,$\frac1{128}$,$\frac1{64}$,$\frac1{32}$,$\frac1{16}$},
+    ]
+    \addplot[black!40, thin, dashed, domain=0.0015:0.08] {1};                                   % the prediction
+    \addplot[m-order3, dashed, mark=triangle] table[x=dx, y expr=\thisrow{measured}/\thisrow{predicted}] {data/stable_rk3ws.dat};
+    \addplot[m-rk4, mark=diamond*]            table[x=dx, y expr=\thisrow{measured}/\thisrow{predicted}] {data/stable_rk4.dat};
+    \addplot[m-dp54, mark=pentagon*]          table[x=dx, y expr=\thisrow{measured}/\thisrow{predicted}] {data/stable_dp54.dat};
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{brlegend}};
+\end{tikzpicture}
+\end{center}
+(i) Every method converges at its general order (\texttt{rk3ws} at 2 on this
+nonlinear problem); \texttt{dp54} is at round-off already at the largest step
+(---). (ii) The measured stable step divided by the diffusion prediction:
+on the coarsest grid the reaction lowers it by $4$--$7\,\%$; from 64 points on
+it agrees with $h^*\Delta x^2/(4\alpha)$ within $0.4\,\%$ for every method,
+and within $0.03\,\%$ on 512 points. At $n = 512$ that is a step of about
+$10^{-4}$ for \texttt{rk4}, on a problem whose oscillation takes seven time
+units: diffusion, not the chemistry, sets the explicit step.
+\end{document}

@@ -1,0 +1,154 @@
+% Example "nonlinchem": the problem, the solutions against the exact one, and
+% the convergence and invariant tests. Every number comes from data/
+% (parameters.tex, results.tex, exact.dat, solution_<method>.dat,
+% history_<method>.dat, error_<method>.dat), written by
+% examples/nonlinchem/main.f90, and data/dp54_mpmath.dat, written by
+% dp54_mpmath.py: run `fpm run --example nonlinchem` from the project root and
+% `python3 dp54_mpmath.py` here, then build this file in examples/nonlinchem/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\begin{document}
+\section*{Example: nonlinear chemistry}
+
+\subsection*{1. Problem}
+From the SciML problem library (\texttt{prob\_ode\_nonlinchem}): a species
+$y_1$ decays into $y_2$, which reacts with itself into $y_3$,
+\begin{equation*}
+  y_1' = -y_1, \qquad
+  y_2' = y_1 - y_2^2, \qquad
+  y_3' = y_2^2, \qquad
+  y(0) = (1, 0, 0).
+\end{equation*}
+The exact solution: $y_1 = e^{-t}$; the equation for $y_2$ is of Riccati
+type, and $y_2 = u'/u$ turns it into $u'' = e^{-t}u$, which in
+$s = 2e^{-t/2}$ is the modified Bessel equation of order zero. With
+$y_2(0) = 0$,
+\begin{equation*}
+  y_2(t) = -\frac{s}{2}\,
+  \frac{I_1(s) - c\,K_1(s)}{I_0(s) + c\,K_0(s)},
+  \qquad c = \frac{I_1(2)}{K_1(2)},
+  \qquad y_3 = 1 - y_1 - y_2 ,
+\end{equation*}
+since $y_1 + y_2 + y_3$ is constant (the three rates add up to zero). The
+term $y_2^2$ makes the problem nonlinear, and $y_2$ decays only like $1/t$.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.9cm}, % two panels side by side
+      width=6.6cm, height=6.2cm,                           % size of each panel
+      grid=major, grid style={black!12},                   % light grid
+      xlabel={$t$}, xmin=0, xmax=20,                       % both panels against time
+    ]
+    % ---- (a) the three species ----
+    \nextgroupplot[
+      title={(a) $y_1, y_2, y_3$ at $\Delta t = 0.5$},     % panel title
+      ymin=0, ymax=1.05,                                   % concentrations
+      legend to name=chemlegend, legend columns=4,         % legend below both panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.3cm}},
+    ]
+    \addplot[black, thick] table[x=t, y=y1] {data/exact.dat};                 % exact y1
+    \addlegendentry{exact}
+    \addplot[black, thick, forget plot] table[x=t, y=y2] {data/exact.dat};    % exact y2
+    \addplot[black, thick, forget plot] table[x=t, y=y3] {data/exact.dat};    % exact y3
+    \addplot[blue!80!black, only marks, mark=diamond*, mark size=1.5pt] table[x=t, y=y1] {data/solution_rk4.dat}; % RK4 y1
+    \addlegendentry{\texttt{rk4}}
+    \addplot[blue!80!black, only marks, mark=diamond*, mark size=1.5pt, forget plot] table[x=t, y=y2] {data/solution_rk4.dat}; % RK4 y2
+    \addplot[blue!80!black, only marks, mark=diamond*, mark size=1.5pt, forget plot] table[x=t, y=y3] {data/solution_rk4.dat}; % RK4 y3
+    \node[font=\small, anchor=west] at (axis cs:0.6,0.9)  {$y_1$}; % label of the decaying species
+    \node[font=\small, anchor=west] at (axis cs:3,0.5)    {$y_2$}; % label of the intermediate
+    \node[font=\small, anchor=west] at (axis cs:12,0.82)  {$y_3$}; % label of the product
+    % ---- (b) error history ----
+    \nextgroupplot[
+      title={(b) error at $\Delta t = 0.25$},              % panel title
+      ymode=log, ylabel={$\max_i |y_i - y_i^{\mathrm{exact}}|$}, % max-norm error, log scale
+      ymin=1e-13, ymax=1,                                  % from round-off to order one
+      legend pos=south west, legend columns=2,             % own legend, in the empty corner
+      legend style={font=\scriptsize},                    % small
+    ]
+    \addplot[green!50!black, thick, dashed] table[x=t, y=error] {data/history_rk3ws.dat}; % order 2 here
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, thick]   table[x=t, y=error] {data/history_rk4.dat};    % order 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, thick]    table[x=t, y=error] {data/history_dp54.dat};   % order 5
+    \addlegendentry{\texttt{dp54}}
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under both panels
+    {\pgfplotslegendfromname{chemlegend}};
+\end{tikzpicture}
+\end{center}
+(a) At $\Delta t = 0.5$ \texttt{rk4} is on the exact curves. (b) The error
+grows while $y_1$ feeds $y_2$, then decays with the solution;
+\texttt{rk3ws} (dashed) is far above \texttt{rk4}: on this nonlinear problem
+it is of order 2, not 3.
+
+\newpage
+\subsection*{3. Tests: convergence order and the linear invariant}
+
+\paragraph{Prediction.} (i) The problem is nonlinear, so each method
+converges at its general order $p$, not at its order on linear problems:
+\texttt{rk3ws} ($c = (0, \tfrac13, \tfrac12)$, $b = (0, 0, 1)$) satisfies
+$b^{\mathsf T}c = \tfrac12$ and $b^{\mathsf T}Ac = \tfrac16$ but
+$b^{\mathsf T}c^2 = \tfrac14 \ne \tfrac13$, a condition that only problems
+with $f'' \ne 0$ (here $y_2^2$) see. (ii) Every Runge--Kutta method keeps
+linear invariants: each stage adds $\Delta t\,a_{ij}k_j$, and every $k_j$ has
+components summing to zero, so $y_1 + y_2 + y_3$ stays 1 to round-off at any
+step size.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{loglogaxis}[
+      width=10.5cm, height=7.5cm,                          % figure size
+      xlabel={time step $\Delta t$},                       % x: step
+      ylabel={error at $t = 20$},                          % y: max-norm global error
+      ymin=1e-21, ymax=1e-1,                               % includes the 40-digit dp54 run
+      grid=major, grid style={black!12},                   % light grid
+      legend pos=outer north east, legend cell align=left, % legend right of the axes
+      legend style={font=\small},                          % compact legend
+      every axis plot/.append style={thick, mark size=1.5pt}, % same weight for all curves
+    ]
+    \addplot[green!50!black, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat}; % slope 2 here
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, mark=diamond*]   table[x=dt, y=error] {data/error_rk4.dat};      % slope 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, mark=pentagon*]   table[x=dt, y=error] {data/error_dp54.dat};     % slope 6.5 before round-off
+    \addlegendentry{\texttt{dp54}}
+    \addplot[red!75!black, dotted, mark=pentagon] table[x=dt, y=error] {data/dp54_mpmath.dat}; % 40 digits
+    \addlegendentry{\texttt{dp54}, 40 digits}
+    \addplot[green!50!black, densely dotted, mark=o] table[x=dt, y=error] {data/error_rk3ws_processed.dat}; % slope 3
+    \addlegendentry{\texttt{rk3ws}, processed}
+  \end{loglogaxis}
+\end{tikzpicture}
+\end{center}
+Every method converges at its general order, \texttt{rk3ws} at 2, and the
+invariant holds to round-off for all of them. \texttt{rk3ws} has
+\emph{effective order} 3: its only third-order defect, the local error
+$-\tfrac{h^3}{24}f''(f,f)$, equals $h^3\bigl(\tfrac{d}{dt}X - f'X\bigr)$ with
+$X = -\tfrac1{24}f'f$, because $\tfrac{d}{dt}(f'f) = f''(f,f) + f'(f'f)$ along
+any solution; so its global error is $h^2\bigl(X(u(t)) - \Phi(t,0)X(u_0)\bigr)
++ O(h^3)$. Starting from $u_0 + h^2 X(u_0)$ and correcting the result by
+$-h^2X(u)$ removes that term: the processed \texttt{rk3ws} (last row, dotted
+circles) converges at order 3. \texttt{dp54} shows a slope of
+about $6.5$ in double precision: its fifth- and sixth-order error terms have
+opposite signs here, so the error first falls faster than $\Delta t^5$. In
+40-digit arithmetic (dotted, \texttt{dp54\_mpmath.py}) the error crosses zero
+near $\Delta t \approx 0.03$ and then converges at order 5; in double
+precision it reaches round-off before that regime.
+\end{document}

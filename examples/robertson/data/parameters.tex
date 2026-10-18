@@ -1,0 +1,16 @@
+% Written by examples/robertson/main.f90: do not edit.
+\begin{tabular}{l>{\raggedright\arraybackslash}p{12.4cm}}
+\toprule
+rate constants & $k_1 = 0.04$, $k_2 = 3\times10^7$, $k_3 = 10^4$ \\
+initial condition & $y = (1, 0, 0)$; interval $0 \le t \le 1000$ \\
+reference & \texttt{dp54}, $\Delta t = 5\times10^{-6}$; 400 samples, log-spaced from $t = 10^{-6}$ \\
+fast eigenvalue & $|\lambda_f| = |T - \sqrt{T^2 - 4D}|/2$, $T = -0.04 - 10^4 y_3 - 6\times10^7 y_2$, $D = 2.4\times10^6 y_2 + 6\times10^{11} y_2^2$ \\
+step sweep & 14 steps, log-spaced from $10^{-4}$ to $10^{-2}$ \\
+failure & first $t$ with a value not finite or outside $[-0.01, 1.01]$, $y_2 < -10^{-6}$, or (for $t > 10^{-3}$) $y_2$ off the reference by more than half \\
+predicted onset & first sampled $t$ with $|\lambda_f(t)|\,\Delta t > h^*$ \\
+reaching $T$ & largest $\Delta t$ whose run reaches $T$ without blowing up; bisection (14 halvings) in $[0.7, 1.5]$ times $h^*/\max_{t \le T}|\lambda_f|$ \\
+figures & \texttt{rk4} at $\Delta t = 2\times10^{-3}$, $7\times10^{-4}$, $3\times10^{-4}$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t} \\
+\bottomrule
+\end{tabular}

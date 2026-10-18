@@ -1,0 +1,15 @@
+% Written by examples/burgers/main.f90: do not edit.
+\begin{tabular}{l>{\raggedright\arraybackslash}p{12.4cm}}
+\toprule
+domain & $0 \le x < 1$, periodic; $200$ cells, $\Delta x = 1/200$ \\
+initial condition & $u(x, 0) = 1$ on $0.25 < x < 0.6$, $-0.5$ elsewhere (a square wave) \\
+interval & $0 \le t \le 0.4$ \\
+space & MUSCL, minmod limiter, Rusanov flux: TVD with forward Euler for CFL $\le 1/2$ \\
+time step & $\Delta t = \mathrm{CFL}\,\Delta x / \max|u_0|$, rounded down to land on $t = 0.4$ \\
+reference & \texttt{rk4}, CFL $= 0.05$ \\
+CFL sweep & $0.05, 0.10, \dots, 1.2$; largest $\mathrm{TV}(u_{n+1}) - \mathrm{TV}(u_n)$ and largest new extremum $\max(\max u - 1, -0.5 - \min u)$ over the run; TVD up to the first CFL with an increase above $10^{-12}$ \\
+figures & solutions at CFL $= 0.6$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t}, 200 unknowns \\
+\bottomrule
+\end{tabular}

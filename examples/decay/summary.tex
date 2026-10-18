@@ -1,0 +1,93 @@
+% Example "decay": the problem, the solutions against the exact one, and the
+% convergence test. Every number comes from data/ (parameters.tex,
+% results.tex, exact.dat, solution_<method>.dat, error_<method>.dat), written
+% by examples/decay/main.f90: run `fpm run --example decay` from the project
+% root, then build this file in examples/decay/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\begin{document}
+\section*{Example: exponential decay}
+
+\subsection*{1. Problem}
+\begin{equation*}
+  \frac{dy}{dt} = -\lambda\, y, \qquad y(0) = 1,
+  \qquad\text{exact solution}\qquad y(t) = e^{-\lambda t}.
+\end{equation*}
+The simplest linear problem: every Runge--Kutta step multiplies $y$ by the
+stability polynomial of the method evaluated at $z = -\lambda\Delta t$, so the
+numerical solution is $y_n = R(-\lambda\Delta t)^n$ and the whole error comes
+from how well $R(z)$ approximates $e^{z}$.
+\begin{center}
+\input{data/parameters.tex}
+\end{center}
+
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{axis}[
+      width=11cm, height=6.5cm,                            % figure size
+      xlabel={$t$}, ylabel={$y$},                          % axes: time, solution
+      xmin=0, xmax=1, ymin=0, ymax=1.05,                   % the whole interval
+      grid=major, grid style={black!12},                   % light grid
+      legend pos=outer north east, legend cell align=left, % legend right of the axes
+      legend style={font=\small},                          % compact legend
+    ]
+    \addplot[black, thick] table[x=t, y=y] {data/exact.dat};              % exact e^{-lambda t}
+    \addlegendentry{exact}
+    \addplot[green!50!black, mark=triangle*, mark size=1.8pt] table[x=t, y=y] {data/solution_rk3ws.dat};  % order 3
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, mark=diamond*, mark size=1.8pt] table[x=t, y=y] {data/solution_rk4.dat};       % order 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, only marks, mark=o, mark size=2.5pt] table[x=t, y=y] {data/solution_dp54.dat}; % order 5
+    \addlegendentry{\texttt{dp54}}
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+At the coarse step of the figure the three methods of the library
+(\texttt{rk3ws} is of order 3 on this linear problem) fall on the exact curve
+at this scale; forward Euler, given as a tableau, would halve $y$ at each step
+($R(-0.5) = 0.5$ against $e^{-0.5} \approx 0.61$).
+
+\newpage
+\subsection*{3. Test: convergence order}
+
+\paragraph{Prediction.} A method of order $p$ has a global error
+$E \approx C\,\Delta t^{p}$: halving $\Delta t$ divides it by $2^p$, a line of
+slope $p$ in log--log axes. On a linear problem the order that counts is how
+many terms of $e^{z}$ the polynomial $R(z)$ matches
+($b^{\mathsf T}A^{k-1}\mathbf{1} = 1/k!$), which can exceed the general order:
+\texttt{rk3ws} is of order 2 in general but 3 here.
+
+\paragraph{Result.}
+\begin{center}
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{loglogaxis}[
+      width=10.5cm, height=7.5cm,                          % figure size
+      xlabel={time step $\Delta t$},                       % x: step
+      ylabel={error $|y_N - e^{-\lambda}|$ at $t = 1$},    % y: global error
+      grid=major, grid style={black!12},                   % light grid
+      legend pos=outer north east, legend cell align=left, % legend right of the axes
+      legend style={font=\small},                          % compact legend
+      every axis plot/.append style={thick, mark size=1.5pt}, % same weight for all curves
+    ]
+    \addplot[green!50!black, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat}; % rk3ws: slope 3 (linear)
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, mark=diamond*]   table[x=dt, y=error] {data/error_rk4.dat};      % RK4: slope 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, mark=pentagon*]   table[x=dt, y=error] {data/error_dp54.dat};     % DP5(4): slope 5
+    \addlegendentry{\texttt{dp54}}
+  \end{loglogaxis}
+\end{tikzpicture}
+\end{center}
+Every method converges at its predicted order. Curves stop where the error
+reaches round-off; methods sharing a stability polynomial coincide.
+\end{document}

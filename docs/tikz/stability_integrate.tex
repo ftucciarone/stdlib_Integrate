@@ -1,0 +1,65 @@
+% Logo of the library: the linear stability regions of the explicit Runge-Kutta
+% methods with s = 1..4 stages (from stability_rk<s>.dat, written by
+% stability_regions.py; no axes, ticks, labels or legend) with the word "Integrate" in Superclarendon, as a
+% violet outline, its "I" filled white at 75% opacity over the curves. The
+% word is placed so that the right edge of the stem of its initial "I" lies
+% exactly on the (undrawn) Im z axis and the Re z axis crosses the I at
+% mid-height. Compile with lualatex (the font is the macOS system font, loaded
+% through fontspec).
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{fontspec}
+\usepackage{pdfrender}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\definecolor{fortranviolet}{RGB}{110,80,146}
+
+\newfontfamily\clarendon{Superclarendon}[UprightFont=* Bold]
+\newcommand{\logofont}{\fontsize{120}{120}\clarendon}
+
+% \iedge: distance from the origin of "I" to the right edge of its stem (the
+% serifs stick out further), and \imid: height above the baseline of the
+% middle of its ink. The stem edge is taken from the outline of the glyph in
+% Superclarendon Bold (stem from x = 137 to 340, serifs from 47 to 429, in
+% units of 1/1000 em), so it must be updated if the font changes; the height
+% is read from the glyph's bounding box. Measured outside the tikzpicture,
+% where a real font is current.
+\newdimen\iedge
+\newdimen\imid
+\newcommand{\measureiedge}{\directlua{
+  local f = fonts.hashes.identifiers[font.current()]
+  local bb = f.descriptions[0x49].boundingbox
+  local s = f.parameters.size / f.parameters.units
+  local stem = 340 * f.parameters.units / 1000
+  tex.setdimen("global", "iedge", math.floor(stem * s + 0.5))
+  tex.setdimen("global", "imid", math.floor((bb[2] + bb[4]) / 2 * s + 0.5))
+}}
+
+\begin{document}
+{\logofont\measureiedge}%
+\begin{tikzpicture}
+  \begin{axis}[
+      x=2.8cm, y=0.625cm,                              % stretched so the I sits inside the RK4 curve
+      xmin=-3.2, xmax=1.0, ymin=-3.2, ymax=3.2,        % frame around the four regions
+      hide axis,                                       % no axes, only the curves
+    ]
+    % boundaries |R(z)| = 1, computed by stability_regions.py (one branch per root)
+    \addplot[very thick, black!45]           table {stability_rk1.dat};  % Euler: disc of radius 1 around -1
+    \addplot[very thick, blue!70!black]      table {stability_rk2.dat};  % two stages, order 2
+    \addplot[very thick, orange!80!black]    table {stability_rk3.dat};  % three stages, order 3
+    \addplot[very thick, red!70!black]       table {stability_rk4.dat};  % four stages, order 4 (RK4)
+    \coordinate (origin) at (axis cs:0,0);                                % where the two axes cross
+  \end{axis}
+
+  % ---- the word: the stem of its "I" flush right against the Im z axis, centred on the Re z axis ----
+  \begin{scope}[every node/.style={anchor=base west, inner sep=0pt, font=\logofont},
+                shift={(origin)}, xshift=-\iedge, yshift=-\imid]
+    \node[text opacity=0.75] at (0,0)
+         {\textpdfrender{TextRenderingMode=Fill, FillColor=white}{I}};    % white inside of the I, mostly hiding the curves
+    \node at (0,0)
+         {\textpdfrender{TextRenderingMode=Stroke, LineWidth=1.2pt,      % outline only, as thick as the curves
+                         StrokeColor=fortranviolet}
+          {Integrate}};                                                   % one node, so the kerning is kept
+  \end{scope}
+\end{tikzpicture}
+\end{document}

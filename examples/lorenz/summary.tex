@@ -1,0 +1,180 @@
+% Example "lorenz": the problem, the attractor and the divergence of the
+% numerical solutions, and the convergence and predictability tests. Every
+% number comes from data/, written by examples/lorenz/main.f90: run
+% `fpm run --example lorenz` from the project root, then build this file with
+% lualatex in examples/lorenz/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs,array}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots,colormaps}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\colorlet{m-euler}{black}
+\colorlet{m-order2}{orange!85!black}
+\colorlet{m-order3}{green!50!black}
+\colorlet{m-rk4}{blue!80!black}
+\colorlet{m-dp54}{red!75!black}
+
+\begin{document}
+\section*{Example: the Lorenz system}
+
+\subsection*{1. Problem}
+Lorenz's model of convection (1963), listed in the SciML problem library as
+\texttt{prob\_ode\_lorenz}, with his classic parameters:
+\begin{gather*}
+  x' = \sigma (y - x), \qquad y' = x(\rho - z) - y, \qquad z' = xy - \beta z,\\
+  (\sigma, \rho, \beta) = (10, 28, \tfrac83), \qquad (x, y, z)(0) = (1, 0, 0).
+\end{gather*}
+The solutions settle on a strange attractor and are chaotic: two solutions
+that start close separate on average like $e^{\lambda t}$, with
+$\lambda \approx 0.906$ the largest Lyapunov exponent. A numerical solution
+is such a nearby solution, so it follows the true one only for a limited
+time, however good the method. The reference is a \texttt{dp54} run at a tiny
+step, itself trusted only up to a time measured in the run.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\newpage
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  % ---- (a) the attractor, the classic x-z view ----
+  \begin{axis}[
+      name=attractor,                                      % anchor for the panels on the right
+      width=8.6cm, height=11.4cm,                          % tall: z spans 0 ... 50
+      xmin=-21, xmax=21, ymin=-1, ymax=52,                 % the butterfly
+      xlabel={$x$}, ylabel={$z$},                          % projection on the x-z plane
+      title={(a) the attractor, $0 \le t \le 60$},         % panel title
+      colormap/viridis, colorbar horizontal,               % colour = time
+      colorbar style={at={(0.5,-0.11)}, anchor=north, xlabel={$t$}, height=0.2cm, width=6cm},
+      axis background/.style={fill=black!2},               % very light background
+    ]
+    \addplot[mesh, point meta=\thisrow{t}, line width=0.3pt]
+      table[x=x, y=z] {data/attractor.dat};                % the trajectory, coloured by time
+    \addplot[only marks, mark=*, mark size=2pt, red!80!black] coordinates {(1,0)};             % start (1, 0, 0)
+    \addplot[only marks, mark=+, mark size=4pt, very thick, black] coordinates {(8.485,27) (-8.485,27)}; % equilibria
+  \end{axis}
+  % ---- (b) x(t): reference and two methods ----
+  \begin{axis}[
+      name=series,                                         % anchor for (c)
+      at={($(attractor.north east)+(1.9cm,0cm)$)}, anchor=north west, % right of (a)
+      width=6.4cm, height=5.4cm,                           % panel
+      xmin=0, xmax=30, ymin=-22, ymax=22,                  % 30 time units
+      ylabel={$x$},                                        % first variable
+      title={(b) $x(t)$, $\Delta t = 0.01$},               % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.02,0.02)}, anchor=south west, fill=white, fill opacity=0.85, text opacity=1, draw=black!30},
+    ]
+    \addplot[black!25, line width=2.6pt] table[x=t, y=x] {data/reference.dat};            % reference
+    \addlegendentry{reference}
+    \addplot[m-rk4, thin] table[x=t, y=x] {data/solution_rk4.dat};                        % RK4
+    \addlegendentry{\texttt{rk4}}
+  \end{axis}
+  % ---- (c) error growth ----
+  \begin{axis}[
+      at={($(series.south west)+(0,-1.6cm)$)}, anchor=north west, % below (b), room for its title
+      width=6.4cm, height=6.2cm,                           % panel
+      xmin=0, xmax=40, ymode=log, ymin=1e-14, ymax=1e3,    % error grows from round-off to the attractor size
+      xlabel={$t$}, ylabel={$|u - u^{\mathrm{ref}}|$},     % distance to the reference
+      title={(c) error growth, $\Delta t = 0.01$},         % panel title
+      axis background/.style={fill=black!2},               % very light background
+      legend style={font=\tiny, at={(0.5,-0.25)}, anchor=north, legend columns=2, draw=none}, % below the panel
+    ]
+    \addplot[m-rk4] table[x=t, y=error] {data/solution_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54] table[x=t, y=error] {data/solution_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    \addplot[black!60, dashed] table[x=t, y=distance] {data/twins.dat};                   % two exact-ish runs 1e-10 apart
+    \addlegendentry{twins, $10^{-10}$ apart}
+    \addplot[black, thin, densely dotted, domain=0:40] {1e-10*exp(0.906*x)};              % e^{lambda t}
+    \addlegendentry{$10^{-10}e^{0.906\,t}$}
+  \end{axis}
+\end{tikzpicture}
+\end{center}
+(a) The butterfly, seen along $y$: the solution winds around the two unstable
+equilibria at $x = y = \pm\sqrt{72}$, $z = 27$ (crosses), switching wing at
+irregular times; colour is time. From $(1, 0, 0)$ (red) it first spirals out
+around one equilibrium for about 17 time units. (b) At $\Delta t = 0.01$ \texttt{rk4} leaves the
+reference near $t \approx 18$; afterwards it is still on the attractor, just
+at a different place. (c) The errors grow on average like $e^{0.906\,t}$
+(dotted), in bursts, until they reach the size of the attractor; the error
+level the method starts from fixes how long it lasts. Growth rates over a
+finite time vary along the orbit: two runs started $10^{-10}$ apart (dashed)
+barely separate during the initial spiral and grow fast only after the wing
+switches begin.
+
+\newpage
+\subsection*{3. Tests: convergence and predictability}
+
+\paragraph{Prediction.} (i) Over a short time each method converges at its
+order. (ii) An error $C\Delta t^p e^{\lambda t}$ reaches 1 at
+$T_{\mathrm{div}} = \bigl(\ln(1/C) + p\ln(1/\Delta t)\bigr)/\lambda$: halving
+the step buys $\ln 2 \cdot p/\lambda$ time units, so $T_{\mathrm{div}}$ grows
+linearly in $\ln(1/\Delta t)$ with slope $p/\lambda$, and each method gives
+an estimate $\lambda = p/\text{slope}$. The order $p$ here is the one that
+governs how errors accumulate. For \texttt{rk3ws} that is 3, not 2: its only
+third-order defect is the local error $-\tfrac{h^3}{24}f''(f,f)$, and since
+$f''(f,f) = \tfrac{d}{dt}(f'f) - f'(f'f)$ along any solution of an autonomous
+system, its global error is $h^2\bigl(X(u(t)) - \Phi(t,0)X(u_0)\bigr) +
+O(h^3)$ with $X = -\tfrac1{24}f'f = -\tfrac1{24}u''$: a second-order term
+that does not accumulate (\texttt{rk3ws} has \emph{effective order} 3).
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.8cm}, % two panels
+      width=7.4cm, height=6.6cm,                           % size of each panel
+      grid=major, grid style={black!8},                    % faint grid
+      axis background/.style={fill=black!2},               % very light background
+      every axis plot/.append style={thick, mark size=1.3pt}, % same weight for all curves
+    ]
+    % ---- (i) convergence ----
+    \nextgroupplot[
+      xmode=log, ymode=log, title={(i) error at $t = 1$}, xlabel={$\Delta t$},
+      legend to name=lzlegend, legend columns=7,           % legend below the panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.25cm}},
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=dt, y=error] {data/error_rk3ws.dat};
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[m-rk4, mark=diamond*]            table[x=dt, y=error] {data/error_rk4.dat};
+    \addlegendentry{\texttt{rk4}}
+    \addplot[m-dp54, mark=pentagon*]          table[x=dt, y=error] {data/error_dp54.dat};
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) predictability ----
+    \nextgroupplot[
+      title={(ii) $T_{\mathrm{div}}$ against $\ln(1/\Delta t)$}, xlabel={$\ln(1/\Delta t)$},
+      ylabel={$T_{\mathrm{div}}$}, ymin=0, ymax=36,        % divergence times
+    ]
+    \addplot[m-order3, dashed, mark=triangle] table[x=logdt, y=tdiv] {data/divergence_rk3ws.dat};
+    \addplot[m-rk4, mark=diamond*]            table[x=logdt, y=tdiv] {data/divergence_rk4.dat};
+    \addplot[m-dp54, mark=pentagon*]          table[x=logdt, y=tdiv] {data/divergence_dp54.dat};
+    \addplot[m-rk4, thin, densely dotted]     table[x=logdt, y=tdiv] {data/divtheory_rk4.dat};    % slope 4/lambda
+    \addplot[m-dp54, thin, densely dotted]    table[x=logdt, y=tdiv] {data/divtheory_dp54.dat};   % slope 5/lambda
+    \addplot[black!40, thin, dashed, domain=3.5:9.2] {34.8};                                     % reference trusted below
+    \node[font=\tiny, anchor=south west, text=black!60] at (axis cs:3.6,34.8) {reference trusted below};
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under the panels
+    {\pgfplotslegendfromname{lzlegend}};
+\end{tikzpicture}
+\end{center}
+(i) Over one time unit every method converges at about its order
+(\texttt{rk3ws}: 2.25, still on its way to 2). (ii) $T_{\mathrm{div}}$ climbs
+in steps rather than along a line: the error grows in bursts at the wing
+switches, so a run departs at one of a few critical moments, and halving the
+step often only moves the departure to the same moment or the next one. On
+average the climb follows the predicted slope $p/\lambda$ (dotted lines,
+$\lambda$ from Benettin's method): the estimates of $\lambda$ lie between
+$0.76$ and $0.88$ for the three methods, against $0.909$ from Benettin's
+method. \texttt{rk3ws} yields its estimate only with $p = 3$, its effective
+order.
+\end{document}

@@ -1,0 +1,138 @@
+% Example "lotkavolterra": the problem, the solutions against the reference
+% and the exact orbit, and the invariant tests. Every number comes from data/
+% (parameters.tex, results.tex, orbit.dat, reference.dat,
+% solution_<method>.dat, drift_<method>.dat, error_<method>.dat), written by
+% examples/lotkavolterra/main.f90: run `fpm run --example lotkavolterra` from
+% the project root, then build this file in examples/lotkavolterra/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,booktabs}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\pgfplotsset{compat=1.18}
+\pagestyle{empty}
+
+\begin{document}
+\section*{Example: Lotka--Volterra predator--prey model}
+
+\subsection*{1. Problem}
+From the SciML problem library (\texttt{prob\_ode\_lotkavolterra}): prey $x$
+grow and are eaten, predators $y$ die out and feed on the prey,
+\begin{equation*}
+  x' = a x - b x y, \qquad y' = -c y + d x y, \qquad x(0) = y(0) = 1 .
+\end{equation*}
+There is no closed form in time, but
+\begin{equation*}
+  V(x, y) = d x - c \ln x + b y - a \ln y
+\end{equation*}
+is constant along every solution ($\dot V = 0$), so the exact orbit is the
+closed level curve $V = V_0$ around the equilibrium $(c/d, a/b)$, computed
+here directly from $V$. In time, the solutions are compared with a
+\texttt{dp54} run at a tiny step.
+\begin{center}
+\small
+\input{data/parameters.tex}
+\end{center}
+
+\subsection*{2. Solutions}
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.9cm}, % two panels side by side
+      width=6.6cm, height=6.2cm,                           % size of each panel
+      grid=major, grid style={black!12},                   % light grid
+    ]
+    % ---- (a) populations in time ----
+    \nextgroupplot[
+      title={(a) $x(t)$, $y(t)$ at $\Delta t = 0.1$},      % panel title
+      xlabel={$t$}, xmin=0, xmax=20, ymin=0, ymax=10,      % time, populations
+      legend to name=lvlegend, legend columns=5,           % legend below both panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.3cm}},
+    ]
+    \addplot[black, thick] table[x=t, y=x] {data/reference.dat};                  % reference prey
+    \addlegendentry{exact orbit / reference}
+    \addplot[black, thick, dashed, forget plot] table[x=t, y=y] {data/reference.dat}; % reference predators
+    \addplot[blue!80!black, thin] table[x=t, y=x] {data/solution_rk4.dat};        % RK4 prey
+    \addlegendentry{\texttt{rk4}}
+    \addplot[blue!80!black, thin, dashed, forget plot] table[x=t, y=y] {data/solution_rk4.dat}; % RK4 predators
+    % ---- (b) phase plane ----
+    \nextgroupplot[
+      title={(b) phase plane, $\Delta t = 0.1$},           % panel title
+      xlabel={prey $x$}, ylabel={predators $y$},           % orbit in the (x, y) plane
+      xmin=0, xmax=9, ymin=0, ymax=6,                      % around the orbit
+    ]
+    \addplot[blue!80!black, thin] table[x=x, y=y] {data/solution_rk4.dat};    % RK4: on the orbit
+    \addplot[black, thick] table[x=x, y=y] {data/orbit.dat};                  % exact orbit V = V0
+    \addplot[only marks, mark=*, mark size=1.5pt] coordinates {(3, 1.5)};     % equilibrium (c/d, a/b)
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under both panels
+    {\pgfplotslegendfromname{lvlegend}};
+\end{tikzpicture}
+\end{center}
+(a) Prey (solid) and predators (dashed) oscillate with a period of about 5.
+At $\Delta t = 0.1$ \texttt{rk4} follows the reference. (b) In the phase
+plane the exact solution runs around the closed curve $V = V_0$ (the dot is
+the equilibrium), and \texttt{rk4} stays on it at this scale.
+
+\newpage
+\subsection*{3. Tests: the invariant $V$}
+
+\paragraph{Prediction.} Runge--Kutta methods do not keep nonlinear invariants
+such as $V$; the drift $|V - V_0|$ is a smooth function of the global error,
+so (i) it converges at the method's (general) order as $\Delta t$ shrinks,
+and (ii) at a fixed step it has two parts: an oscillation within each cycle,
+bounded, and a secular part that grows linearly in time as the orbit moves
+from one level curve to the next.
+
+\paragraph{Result.}
+\begin{center}
+\small
+\input{data/results.tex}
+\end{center}
+
+\begin{center}
+\begin{tikzpicture}
+  \begin{groupplot}[
+      group style={group size=2 by 1, horizontal sep=1.9cm}, % two panels side by side
+      width=6.6cm, height=6.2cm,                           % size of each panel
+      grid=major, grid style={black!12},                   % light grid
+      every axis plot/.append style={thick},               % same weight for all curves
+    ]
+    % ---- (i) convergence ----
+    \nextgroupplot[
+      xmode=log, ymode=log,                                % both axes logarithmic
+      title={(i) $\max_t |V - V_0|$, $0 \le t \le 10$},    % panel title
+      xlabel={$\Delta t$},                                 % step
+      legend to name=lvtestlegend, legend columns=7,       % legend below both panels
+      legend style={font=\small, /tikz/every even column/.append style={column sep=0.2cm}},
+    ]
+    \addplot[green!50!black, dashed, mark=triangle, mark size=1.5pt] table[x=dt, y=error] {data/error_rk3ws.dat}; % order 2 here
+    \addlegendentry{\texttt{rk3ws}}
+    \addplot[blue!80!black, mark=diamond*, mark size=1.5pt]   table[x=dt, y=error] {data/error_rk4.dat};      % order 4
+    \addlegendentry{\texttt{rk4}}
+    \addplot[red!75!black, mark=pentagon*, mark size=1.5pt]   table[x=dt, y=error] {data/error_dp54.dat};     % order 5
+    \addlegendentry{\texttt{dp54}}
+    % ---- (ii) long time ----
+    \nextgroupplot[
+      xmode=log, ymode=log,                                % both axes logarithmic
+      title={(ii) $\max_{s \le t}|V - V_0|$, $\Delta t = 0.05$}, % panel title: running maximum
+      xlabel={$t$}, ymin=1e-12,                            % time up to t_long
+    ]
+    \addplot[green!50!black, dashed] table[x=t, y=drift] {data/drift_rk3ws.dat};   % order 2 here
+    \addplot[blue!80!black]         table[x=t, y=drift] {data/drift_rk4.dat};      % order 4
+    \addplot[red!75!black]          table[x=t, y=drift] {data/drift_dp54.dat};     % order 5
+  \end{groupplot}
+  \node[below=0.2cm] at (current bounding box.south)        % legend centred under both panels
+    {\pgfplotslegendfromname{lvtestlegend}};
+\end{tikzpicture}
+\end{center}
+(i) The drift converges at each method's general order; \texttt{rk3ws} is of
+order 2 on this nonlinear problem, and \texttt{dp54} is still approaching
+order 5 from above (as in the nonlinear chemistry example). (ii) The running
+maximum of the drift: for \texttt{rk4} and \texttt{dp54} it grows tenfold
+per decade of $t$ from $t \approx 10$ on (the steps below are single cycles),
+the linear secular part; for \texttt{rk3ws}, of lower order, the oscillation
+within a cycle dominates first and the linear growth takes over later. No
+explicit Runge--Kutta method stays on the orbit forever; all three stay
+bounded over the whole run.
+\end{document}

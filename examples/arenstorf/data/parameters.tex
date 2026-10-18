@@ -1,0 +1,16 @@
+% Written by examples/arenstorf/main.f90: do not edit.
+\begin{tabular}{ll}
+\toprule
+mass ratio & $\mu = 0.012277471$ (Moon / (Earth + Moon)) \\
+initial position & $y = (0.994, 0)$ \\
+initial velocity & $\dot y = (0, -2.00158510637908252240537862224)$ \\
+period & $T = 17.0652165601579625588917206249$ \\
+reference & \texttt{dp54}, 640000 steps \\
+solution figures & 4000 and 64000 steps per period (2000 points drawn) \\
+convergence & closing error $\max_i |u_i(T) - u_i(0)|$, 1000, 2000, \dots, 4096000 steps \\
+observed order & slope of the two finest levels with errors in $(10^{-8}, 10^{-1})$ \\
+cost & fewest such step count closing to $1.00\times10^{-3}$; evaluations of $f$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & plain arrays, \texttt{rk\_array\_scheme\_t}, state $(y_1, y_2, \dot y_1, \dot y_2)$ \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,12 @@
+% Written by examples/pleiades/main.f90: do not edit.
+\begin{tabular}{lccccccc}
+\toprule
+& & \multicolumn{2}{c}{observed order} & \multicolumn{3}{c}{largest drift, 3072 steps} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-7}
+name & order & $t = 1$ & $t = 3$ & momentum $|P - P_0|$ & angular $|L - L_0|$ & energy $|E - E_0|$ \\
+\midrule
+\texttt{rk3ws} & 2 & 1.99 & 3.00 & $5.06\times10^{-14}$ & $1.40\times10^{-2}$ & $5.30\times10^{0}$ \\
+\texttt{rk4} & 4 & 4.02 & 4.21 & $1.38\times10^{-13}$ & $2.73\times10^{-4}$ & $2.10\times10^{-1}$ \\
+\texttt{dp54} & 5 & --- & --- & $1.36\times10^{-13}$ & $4.11\times10^{-5}$ & $2.60\times10^{-2}$ \\
+\bottomrule
+\end{tabular}

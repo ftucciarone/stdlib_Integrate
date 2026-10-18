@@ -1,0 +1,12 @@
+% Written by examples/robertson/main.f90: do not edit.
+\begin{tabular}{lcccccc}
+\toprule
+& & \multicolumn{4}{c}{largest step reaching $T$, measured / predicted} & \\
+\cmidrule(lr){3-6}
+name & $h^*$ & $T = 1$ & $T = 10$ & $T = 100$ & $T = 1000$ & steps to $t = 1000$ \\
+\midrule
+\texttt{rk3ws} & 2.5127 & 1.0876 & 1.0172 & 0.9967 & 0.9921 & $2.69\times10^{6}$ \\
+\texttt{rk4} & 2.7853 & 1.0590 & 1.1554 & 1.0104 & 0.9938 & $2.42\times10^{6}$ \\
+\texttt{dp54} & 3.3066 & 0.8324 & 0.9604 & 1.0385 & 1.0722 & $2.04\times10^{6}$ \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,13 @@
+% Written by examples/heat/main.f90: do not edit.
+\begin{tabular}{l>{\raggedright\arraybackslash}p{12.4cm}}
+\toprule
+initial condition & $u(x, 0) = \sin\pi x + \tfrac12\sin 4\pi x + \tfrac14\sin 9\pi x$ \\
+space & central differences, $n$ interior nodes, $\Delta x = 1/(n + 1)$; boundary nodes set to 0 by \texttt{apply\_boundaries} \\
+time convergence & $n = 63$, error against the semi-discrete solution at $t = 0.02$, $\Delta t = 10^{-4}, \dots, 10^{-4}/64$; order from the two finest levels above $10^{-13}$, kept if within 0.3 of the next slope \\
+stability & $n = 15, 31, 63, 127, 255$; largest $\Delta t$ for which 3000 steps do not let $\max|u|$ grow (initial value plus $10^{-6}(-1)^j$); bisection in $[0.8, 1.2]$ times the prediction; table: the ratio farthest from 1 \\
+PDE error & at $t = 0.02$ with $\Delta t \approx 0.9$ of each method's limit; order from the two finest grids \\
+figures & \texttt{rk4}, $n = 63$ \\
+methods & \texttt{rk3ws}, \texttt{rk4}, \texttt{dp54} \\
+interface & model classes, \texttt{rk\_scheme}, \texttt{apply\_boundaries} for the boundary \\
+\bottomrule
+\end{tabular}

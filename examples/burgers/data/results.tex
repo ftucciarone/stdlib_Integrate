@@ -1,0 +1,12 @@
+% Written by examples/burgers/main.f90: do not edit.
+\begin{tabular}{lcccccc}
+\toprule
+& & & \multicolumn{2}{c}{largest TV increase per step} & \multicolumn{2}{c}{largest new extremum} \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+name & SSP coeff. & TVD up to CFL & at CFL 0.45 & at CFL 0.60 & at CFL 0.45 & at CFL 0.60 \\
+\midrule
+\texttt{rk3ws} & 0 & 0.45 & $\le 10^{-12}$ & $3.22\times10^{-4}$ & $\le 10^{-12}$ & $1.61\times10^{-4}$ \\
+\texttt{rk4} & 0 & 0.40 & $4.33\times10^{-11}$ & $\le 10^{-12}$ & $2.16\times10^{-11}$ & $\le 10^{-12}$ \\
+\texttt{dp54} & 0 & 0.25 & $6.34\times10^{-4}$ & $5.62\times10^{-2}$ & $2.17\times10^{-4}$ & $1.63\times10^{-2}$ \\
+\bottomrule
+\end{tabular}

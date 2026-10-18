@@ -1,0 +1,12 @@
+% Written by examples/vanderpol/main.f90: do not edit.
+\begin{tabular}{lccccccl}
+\toprule
+& & \multicolumn{2}{c}{observed order} & \multicolumn{4}{c}{stiffness, $\mu\,\Delta t_{\max}$ at $\mu = 1000$} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-8}
+name & order & solution & period & measured & $h^*/3$ & along the cycle & first blows up \\
+\midrule
+\texttt{rk3ws} & 2 & 2.01 & 3.00 & 0.8070 & 0.8376 & 0.8322 & slow branch \\
+\texttt{rk4} & 4 & 4.00 & 4.00 & 0.8225 & 0.9284 & 0.9225 & fast jump \\
+\texttt{dp54} & 5 & --- & 5.98 & 0.8469 & 1.1022 & 1.0951 & fast jump \\
+\bottomrule
+\end{tabular}
